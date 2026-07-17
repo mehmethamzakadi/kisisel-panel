@@ -1,0 +1,3 @@
+# SPA: /notlar gibi yollar doğrudan açıldığında da index.html sunulsun.
+# (Cloudflare Pages / Netlify bu dosyayı okur.)
+/*  /index.html  200
