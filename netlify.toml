@@ -1,0 +1,14 @@
+# Netlify derleme ayarları. Bu dosya olmadan Netlify neyi derleyip hangi
+# klasörü yayınlayacağını bilmez; JS istekleri bulunamaz, SPA fallback index.html
+# döndürür ve tarayıcı "MIME type application/octet-stream" hatası verir.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA: /notlar, /tarifler gibi yollar doğrudan açıldığında da index.html sunulur.
+# (Gerçek dosyalar — /assets/*.js — bu kuraldan önce servis edilir.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
