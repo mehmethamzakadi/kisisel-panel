@@ -176,81 +176,113 @@ export function MealCard() {
       }
     >
       {suggestion && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-1 flex-col gap-4">
           <div>
-            <p className="font-semibold">{suggestion.name}</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
+            <h3 className="text-lg leading-tight font-semibold">
+              {suggestion.name}
+            </h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted">
               {suggestion.summary}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent">
-              {suggestion.minutes} dk
-            </span>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-muted">
-              {meal}
-            </span>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-muted">
-              {suggestion.ingredients.length} malzeme
-            </span>
-          </div>
+          {/* Künye: süre öne çıksın, diğer ikisi bağlam. */}
+          <dl className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-accent-soft py-2">
+              <dt className="text-[11px] text-accent/70">Süre</dt>
+              <dd className="text-sm font-semibold text-accent tabular-nums">
+                {suggestion.minutes} dk
+              </dd>
+            </div>
+            <div className="rounded-lg bg-panel py-2">
+              <dt className="text-[11px] text-muted">Öğün</dt>
+              <dd className="truncate px-1 text-sm font-medium capitalize">
+                {meal}
+              </dd>
+            </div>
+            <div className="rounded-lg bg-panel py-2">
+              <dt className="text-[11px] text-muted">Malzeme</dt>
+              <dd className="text-sm font-medium tabular-nums">
+                {suggestion.ingredients.length}
+              </dd>
+            </div>
+          </dl>
 
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => void save()}
               disabled={saved}
-              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-60"
+              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent disabled:border-edge disabled:bg-transparent disabled:text-muted disabled:opacity-60"
             >
               {saved ? '★ Kaydedildi' : '☆ Beğendim'}
             </button>
             <button
               onClick={() => void addToShopping()}
-              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel"
+              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
             >
               {added ? `✓ ${added}` : '🛒 Malzemeleri ekle'}
             </button>
             <button
               onClick={() => void playKitchen()}
               title="Öğüne uygun bir çalma listesi başlatır"
-              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel"
+              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
             >
               🎵 Mutfak müziği
-            </button>
-            <button
-              onClick={() => setOpen((v) => !v)}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-accent hover:underline"
-            >
-              {open ? 'Tarifi gizle' : 'Tarifi gör'}
             </button>
           </div>
 
           {music && <p className="text-xs text-muted">{music}</p>}
 
+          {/* Tarif ayrı bir düğmeye alındı: diğer eylemlerin arasında
+              kaybolan bir bağlantıydı, oysa kartın asıl içeriği bu. */}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="flex items-center justify-between rounded-xl border border-edge px-3 py-2.5 text-sm font-medium transition-colors hover:bg-panel"
+          >
+            {open ? 'Tarifi gizle' : 'Tarifi gör'}
+            <span
+              aria-hidden
+              className={`text-xs text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+            >
+              ▾
+            </span>
+          </button>
+
           {open && (
-            <div className="flex flex-col gap-3 border-t border-edge pt-3 text-sm">
+            <div className="flex flex-col gap-4 text-sm">
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-muted uppercase">
+                <p className="mb-2 text-xs font-semibold text-muted uppercase">
                   Malzemeler
                 </p>
-                <ul className="flex flex-col gap-1">
+                {/* İki sütun: malzemeler kısa satırlar, tek sütunda kartı
+                    gereksiz uzatıyorlardı. */}
+                <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
                   {suggestion.ingredients.map((item) => (
                     <li key={item} className="flex gap-2">
-                      <span className="text-muted">•</span>
-                      {item}
+                      <span className="text-accent" aria-hidden>
+                        ·
+                      </span>
+                      <span className="min-w-0">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
+
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-muted uppercase">
+                <p className="mb-2 text-xs font-semibold text-muted uppercase">
                   Hazırlanışı
                 </p>
-                <ol className="flex flex-col gap-1.5">
+                <ol className="flex flex-col gap-2.5">
                   {suggestion.steps.map((step, i) => (
-                    <li key={step} className="flex gap-2">
-                      <span className="text-muted tabular-nums">{i + 1}.</span>
-                      {step}
+                    <li key={step} className="flex gap-2.5">
+                      <span
+                        aria-hidden
+                        className="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent tabular-nums"
+                      >
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 leading-relaxed">{step}</span>
                     </li>
                   ))}
                 </ol>
@@ -258,7 +290,7 @@ export function MealCard() {
             </div>
           )}
 
-          <p className="flex items-center justify-between text-xs text-muted">
+          <p className="mt-auto flex items-center justify-between border-t border-edge pt-3 text-xs text-muted">
             <span>Gemini tarafından öneriliyor</span>
             <Link to="/tarifler" className="hover:text-accent hover:underline">
               Kayıtlı tarifler →
