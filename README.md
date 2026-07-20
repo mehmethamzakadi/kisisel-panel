@@ -75,6 +75,7 @@ projenin hareketsizlikten duraklatılmasını da engeller.
 | Haberler | BBC Türkçe / TRT / Hacker News RSS | gerekmiyor |
 | Yemek önerisi | Gemini (`gemini-3.5-flash`) | **Supabase secret** |
 | Günün sözü | kendi `quotes` tablosu | — |
+| Müzik | Spotify Web API | **Supabase secret** |
 
 ### Gemini anahtarı
 
@@ -87,6 +88,47 @@ npx supabase secrets set GEMINI_API_KEY=... --project-ref <ref>
 
 Yalnızca `suggest-meal` fonksiyonu okur. Fonksiyon `verify_jwt` ile korunduğu
 için sadece giriş yapmış kullanıcı çağırabilir.
+
+### Spotify
+
+Kurulum:
+
+1. [developer.spotify.com](https://developer.spotify.com/dashboard) → **Create app**.
+   Uygulama sahibi hesabın **Premium** olmalı (Şubat 2026'dan beri Development
+   Mode şartı).
+2. **Redirect URI** olarak birebir şunu ekle (tek bir adres yeter — callback
+   Supabase'de, Netlify'da değil):
+   `https://hvcphkcshdjpobihzypj.supabase.co/functions/v1/spotify-callback`
+3. Secret'ları tanımla — `client_secret` tarayıcıya **konmaz**:
+
+```bash
+npx supabase secrets set \
+  SPOTIFY_CLIENT_ID=... \
+  SPOTIFY_CLIENT_SECRET=... \
+  PANEL_URL=https://poetic-cucurucho-03be49.netlify.app \
+  --project-ref <ref>
+```
+
+4. `supabase/spotify.sql` dosyasını SQL Editor'de çalıştır.
+5. Fonksiyonları yayına al — callback ve senkron JWT **doğrulamasız** olmalı:
+
+```bash
+npx supabase functions deploy spotify-connect  --project-ref <ref>
+npx supabase functions deploy spotify-now      --project-ref <ref>
+npx supabase functions deploy spotify-callback --no-verify-jwt --project-ref <ref>
+npx supabase functions deploy spotify-sync     --no-verify-jwt --project-ref <ref>
+```
+
+6. `supabase/cron.sql` yeniden çalıştırılınca `spotify-sync` de 15 dakikalık
+   cron'a girer.
+7. Panelde Müzik kartından **Spotify'ı bağla**.
+
+Arşiv anlamlı hale gelmesi için zaman ister: ilk gün sadece son 50 şarkı görünür.
+
+Bağlantı hem canlı panelden hem `localhost:5173`'ten kurulabilir: `spotify-connect`
+akışın başladığı adresi `spotify_oauth_state.return_to`'ya yazar, callback oraya
+döner. Liste `_shared/spotify.ts` içindeki `returnTarget`'ta; başka bir adres
+eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
 
 ### Bilinen tuzaklar
 
@@ -108,6 +150,27 @@ için sadece giriş yapmış kullanıcı çağırabilir.
   Gemini'ye **istek gitmez**; yeni öneri yalnızca "Başka öner" ile alınır ve
   önbelleği ezer. Görülen tarifler de (`panel:meal-seen`) saklanır, böylece
   yenilemeden sonra aynı tarifler tekrar önerilmez.
+- **Spotify — ölü uçlar**: `audio-features`, `audio-analysis`, `recommendations`
+  ve `related-artists` 27 Kasım 2024'te yeni uygulamalara kapatıldı, geri
+  gelmedi. "Şarkının enerjisine göre ruh hali" tarzı her fikir bu yüzden
+  yapılamaz; vibe çıkarımı gerekiyorsa parça/sanatçı adlarıyla Gemini'ye
+  sorulmalı. Şubat 2026'da ayrıca toplu `GET /tracks`, `artists/{id}/top-tracks`
+  ve `browse/*` kaldırıldı, `search` limiti 50'den 10'a indi.
+- **Spotify — refresh_token dönüşümlü**: tazeleme yanıtı bazen *yeni* bir
+  `refresh_token` içerir ve eskisini geçersizleştirir. Yazılmazsa bağlantı
+  günler sonra sessizce kopar; `_shared/spotify.ts` bu yüzden dönen değeri
+  her seferinde üstüne yazar.
+- **`spotify_auth` policy'siz**: tabloda RLS açık ama bilerek hiçbir policy
+  yok — `authenticated` rolü satırları hiç göremez, yalnızca service_role
+  kullanan Edge Function erişir. Panel "bağlı mıyım?" sorusunu tablodan değil
+  `spotify-now` yanıtından öğrenir.
+- **`spotify-callback` JWT'siz**: tarayıcı oraya Spotify'ın yönlendirmesiyle,
+  `Authorization` başlığı olmadan gelir. Güvenlik sınırı `state` parametresi:
+  `spotify-connect`'in yazdığı satırla eşleşmeyen istek reddedilir ve state
+  okunduğu anda silinir, tekrar oynatılamaz.
+- **`plays` birincil anahtarı `(user_id, played_at)`**: `recently-played`
+  pencereleri üst üste bindiği için senkron aynı çalmayı tekrar tekrar görür;
+  tekrar yazımı engelleyen tek şey bu anahtar.
 - **Alışveriş listesi**: malzeme eklemek tek yerden,
   [`lib/shopping.ts`](src/lib/shopping.ts) üzerinden yapılır. Aynı malzemeyi
   panelden ve `/tarifler`den eklemek tekrar üretmesin diye listede duran
@@ -132,6 +195,7 @@ için sadece giriş yapmış kullanıcı çağırabilir.
 - [x] Açık tema
 - [x] PWA (ana ekrana ekle)
 - [x] `refresh-snapshot` deploy + 15 dakikalık cron
+- [x] Spotify: çalan şarkı kartı, dinleme arşivi (`/muzik`), notlara şarkı damgası
 
 ## Sayfalar
 
@@ -140,3 +204,4 @@ için sadece giriş yapmış kullanıcı çağırabilir.
 | `/` | Panel — kartlar |
 | `/notlar` | Not defteri: arama, sabitleme, düzenleme, hatırlatma, Gemini |
 | `/tarifler` | Kaydedilen tarifler |
+| `/muzik` | Dinleme arşivi: ısı haritası, aylık zirveler, geçen sene bugün |

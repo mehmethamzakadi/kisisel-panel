@@ -5,6 +5,7 @@ import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { DashboardPage } from './pages/DashboardPage'
 import { NotesPage } from './pages/NotesPage'
 import { MealsPage } from './pages/MealsPage'
+import { MusicPage } from './pages/MusicPage'
 import { Login } from './components/Login'
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/" element={<DashboardPage demo />} />
           <Route path="/notlar" element={<NotesPage />} />
           <Route path="/tarifler" element={<MealsPage />} />
+          <Route path="/muzik" element={<MusicPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
@@ -47,6 +49,7 @@ function App() {
         <Route path="/" element={<DashboardPage email={session.user.email} />} />
         <Route path="/notlar" element={<NotesPage />} />
         <Route path="/tarifler" element={<MealsPage />} />
+        <Route path="/muzik" element={<MusicPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

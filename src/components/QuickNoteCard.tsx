@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { supabase } from '../lib/supabase'
+import { fetchNowPlaying, toStamp } from '../lib/spotify'
+import type { NoteStamp } from '../lib/spotify'
 
 type Note = {
   id: number
@@ -29,6 +31,8 @@ export function QuickNoteCard() {
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stamp, setStamp] = useState<NoteStamp | null>(null)
+  const asked = useRef(false)
 
   useEffect(() => {
     if (!supabase) {
@@ -71,6 +75,20 @@ export function QuickNoteCard() {
     }
   }, [])
 
+  /**
+   * Not yazmaya başlanınca o an çalan şarkı sorulur — panel açılışında değil.
+   * Böylece her yenilemede Spotify'a gereksiz istek gitmez ve damga yalnızca
+   * gerçekten not yazılan anı yakalar.
+   */
+  function askNowPlaying() {
+    if (asked.current || !supabase) return
+    asked.current = true
+
+    void fetchNowPlaying().then((state) => {
+      if (state.playing) setStamp(toStamp(state.playing))
+    })
+  }
+
   async function addNote(e: React.FormEvent) {
     e.preventDefault()
     const body = draft.trim()
@@ -79,7 +97,7 @@ export function QuickNoteCard() {
     setSaving(true)
     const { data, error } = await supabase
       .from('notes')
-      .insert({ body })
+      .insert({ body, spotify: stamp })
       .select('id, body, created_at, remind_on')
       .single()
     setSaving(false)
@@ -91,6 +109,9 @@ export function QuickNoteCard() {
 
     setRecent((prev) => [data, ...(prev ?? [])].slice(0, 3))
     setDraft('')
+    // Sonraki not için damga yeniden sorulsun; şarkı değişmiş olabilir.
+    setStamp(null)
+    asked.current = false
   }
 
   return (
@@ -120,10 +141,28 @@ export function QuickNoteCard() {
           </ul>
         )}
 
+        {stamp && (
+          <div className="flex items-center gap-2 rounded-lg bg-panel px-2.5 py-1.5 text-xs">
+            <span aria-hidden>🎧</span>
+            <span className="min-w-0 flex-1 truncate text-muted">
+              {stamp.track} — {stamp.artist}
+            </span>
+            <button
+              type="button"
+              onClick={() => setStamp(null)}
+              aria-label="Şarkı damgasını kaldır"
+              className="shrink-0 text-muted hover:text-ink"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <form onSubmit={addNote} className="flex gap-2">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onFocus={askNowPlaying}
             placeholder="Aklındakini yaz…"
             className="min-w-0 flex-1 rounded-lg border border-edge bg-panel/60 px-3 py-2 text-sm outline-none focus:border-accent focus:bg-card"
           />

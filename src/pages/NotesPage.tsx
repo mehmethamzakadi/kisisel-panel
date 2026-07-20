@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { BackIcon } from '../components/icons'
+import type { NoteStamp } from '../lib/spotify'
 
 type Note = {
   id: number
@@ -9,9 +10,10 @@ type Note = {
   created_at: string
   pinned: boolean
   remind_on: string | null
+  spotify: NoteStamp | null
 }
 
-const SELECT = 'id, body, created_at, pinned, remind_on'
+const SELECT = 'id, body, created_at, pinned, remind_on, spotify'
 
 const stamp = new Intl.DateTimeFormat('tr-TR', {
   day: 'numeric',
@@ -312,6 +314,26 @@ export function NotesPage() {
                           ⏰ {dateOnly.format(new Date(note.remind_on))}
                           {note.remind_on <= t && ' • bugün'}
                         </span>
+                      )}
+                      {note.spotify && (
+                        <a
+                          href={note.spotify.url ?? '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Bu notu yazarken çalıyordu"
+                          className="flex items-center gap-1.5 rounded-full bg-panel px-2 py-0.5 hover:text-accent"
+                        >
+                          {note.spotify.art && (
+                            <img
+                              src={note.spotify.art}
+                              alt=""
+                              className="size-3.5 rounded-[3px] object-cover"
+                            />
+                          )}
+                          <span className="max-w-64 truncate">
+                            {note.spotify.track} — {note.spotify.artist}
+                          </span>
+                        </a>
                       )}
                     </p>
                   </div>

@@ -7,6 +7,7 @@ import { QuoteCard } from '../components/QuoteCard'
 import { MealCard } from '../components/MealCard'
 import { QuickNoteCard } from '../components/QuickNoteCard'
 import { ShoppingCard } from '../components/ShoppingCard'
+import { SpotifyCard } from '../components/SpotifyCard'
 
 export type CardId =
   | 'weather'
@@ -17,11 +18,13 @@ export type CardId =
   | 'gold'
   | 'quote'
   | 'news'
+  | 'spotify'
 
 export const CARDS: { id: CardId; label: string; render: () => ReactNode }[] = [
   { id: 'weather', label: 'Hava Durumu', render: () => <WeatherCard /> },
   { id: 'meal', label: 'Bugün Ne Yesem?', render: () => <MealCard /> },
   { id: 'quicknote', label: 'Hızlı Not', render: () => <QuickNoteCard /> },
+  { id: 'spotify', label: 'Müzik', render: () => <SpotifyCard /> },
   { id: 'shopping', label: 'Alışveriş', render: () => <ShoppingCard /> },
   { id: 'rates', label: 'Döviz', render: () => <RatesCard /> },
   { id: 'gold', label: 'Altın', render: () => <GoldCard /> },
