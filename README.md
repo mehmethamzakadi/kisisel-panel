@@ -182,6 +182,11 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   istemcisi yoksa 404 döner. Bu bir hata değil, "cihaz seç" durumudur; kart
   `/me/player/devices` listesini gösterip seçimi `localStorage`'a yazar.
   403 ise hesabın Premium olmadığı anlamına gelir.
+- **İzin eksikse player uçları 401 döner, 403 değil**: alışılmış olan yetersiz
+  izinde 403'tür, ama Spotify `/me/player/*` için 401 ("Permissions missing")
+  veriyor. Bu yanıltıcı: aynı jetonla `search` sorunsuz çalıştığı için jeton
+  geçersiz sanılıyor. `spotify-play` bu yüzden player uçlarındaki 401'i
+  "yeniden yetki ver" olarak yorumluyor.
 - **Ruh hali eşleştirmesi elle yazıldı**: `audio-features` kapandığı için
   hava kodu → arama sözcüğü eşlemesi [`lib/playback.ts`](src/lib/playback.ts)
   içinde sabit. Gemini'ye de sorulabilirdi ama çalma düğmesine basınca 3-5

@@ -106,9 +106,14 @@ export async function play(
   return { ok: false, reason: 'failed', detail: String(data.detail ?? data.error ?? '') }
 }
 
-export async function pause(): Promise<boolean> {
+export async function pause(): Promise<{ ok: boolean; message?: string }> {
   const data = await call({ action: 'pause' })
-  return Boolean(data?.ok)
+  if (data?.ok) return { ok: true }
+
+  return {
+    ok: false,
+    message: describeFailure(String(data?.error ?? 'failed'), data?.detail),
+  }
 }
 
 export async function listDevices(): Promise<Device[]> {

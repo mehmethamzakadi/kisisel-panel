@@ -283,7 +283,10 @@ export function SpotifyCard() {
             {now.is_playing && (
               <button
                 onClick={() => {
-                  void pause().then(() => setTimeout(() => void refresh(), 800))
+                  void pause().then((result) => {
+                    if (!result.ok) setNotice(result.message ?? null)
+                    setTimeout(() => void refresh(), 800)
+                  })
                 }}
                 className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel"
               >

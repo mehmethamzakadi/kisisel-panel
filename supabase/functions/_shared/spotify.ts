@@ -70,9 +70,24 @@ export function redirectUri() {
 
 const LOCAL_PANEL = 'http://localhost:5173'
 
+/**
+ * PANEL_URL secret'ı elle yazılıyor ve bozuk gelebiliyor. En sinsi hâli,
+ * CLI bayrağının değere yapışması:
+ *   PANEL_URL="https://panel.app --project-ref abc123"
+ * Bu fark edilmezse callback var olmayan bir konağa yönlendirir ve kullanıcı
+ * ölü bir sayfada kalır. Bu yüzden ilk boşluğa kadarı alınıp doğrulanıyor;
+ * geçerli bir adres çıkmazsa localhost'a düşülür.
+ */
 function panelUrl() {
-  // Secret'a sondaki eğik çizgiyle yazılmış olabilir; Origin'de asla yoktur.
-  return (Deno.env.get('PANEL_URL') ?? LOCAL_PANEL).replace(/\/+$/, '')
+  const raw = (Deno.env.get('PANEL_URL') ?? '').trim().split(/\s+/)[0] ?? ''
+  const candidate = raw.replace(/\/+$/, '')
+
+  try {
+    new URL(candidate)
+    return candidate
+  } catch {
+    return LOCAL_PANEL
+  }
 }
 
 /**

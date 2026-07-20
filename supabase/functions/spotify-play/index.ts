@@ -76,7 +76,16 @@ Deno.serve(async (req) => {
     if (body.action === 'pause') {
       const res = await apiWrite(token, '/me/player/pause')
       // 403: zaten duraklatılmış olabilir, hata sayılmaz.
-      return Response.json({ ok: res.ok || res.status === 403 }, { headers: cors })
+      if (res.ok || res.status === 403) {
+        return Response.json({ ok: true }, { headers: cors })
+      }
+      if (res.status === 401) {
+        return Response.json({ error: 'scope-missing' }, { headers: cors })
+      }
+      return Response.json(
+        { error: 'failed', detail: `Spotify ${res.status}` },
+        { headers: cors },
+      )
     }
 
     if (body.action === 'play') {
@@ -105,6 +114,12 @@ Deno.serve(async (req) => {
           { error: 'no-device', devices: await devices(token), playlist },
           { headers: cors },
         )
+      }
+
+      // 401: jeton geçerli — arama az önce aynı jetonla çalıştı — ama player
+      // uçları için izin yok. Spotify burada 403 değil 401 döndürüyor.
+      if (res.status === 401) {
+        return Response.json({ error: 'scope-missing' }, { headers: cors })
       }
 
       // 403: hesap Premium değil — çalma kontrolü Premium'a kapalı.

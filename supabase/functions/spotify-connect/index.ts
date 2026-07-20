@@ -57,6 +57,10 @@ Deno.serve(async (req) => {
     redirect_uri: redirectUri(),
     scope: SCOPES,
     state,
+    // İzin listesi büyüdüğünde onay ekranının atlanmadığından emin olmak için.
+    // Bağlanmak nadir bir iş; fazladan bir tık, sessizce eksik izinle
+    // bağlanmaktan iyi.
+    show_dialog: 'true',
   }).toString()
 
   return Response.json({ url: url.toString() }, { headers: cors })
