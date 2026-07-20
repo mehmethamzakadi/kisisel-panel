@@ -11,12 +11,14 @@ export const TOKEN_URL = 'https://accounts.spotify.com/api/token'
 
 const API = 'https://api.spotify.com/v1'
 
-// Yalnızca kullanılan izinler isteniyor. Playback kontrolü (odak seansı,
-// hava durumuna göre çalma) eklenirse buraya user-modify-playback-state ve
-// user-read-playback-state gelir ve yetki bir kez daha verilir.
+// Bu liste değişirse kullanıcının Spotify'a yeniden yetki vermesi gerekir:
+// eski refresh_token yeni izinleri kapsamaz ve ilgili uçlar 403 döner.
 export const SCOPES = [
   'user-read-currently-playing',
   'user-read-recently-played',
+  // Çalma kontrolü: havaya göre çal, odak seansı, sabah rutini.
+  'user-read-playback-state',
+  'user-modify-playback-state',
 ].join(' ')
 
 export type Track = {
@@ -178,4 +180,29 @@ export async function api(token: string, path: string) {
   if (res.status === 204) return null
   if (!res.ok) throw new Error(`Spotify ${path} ${res.status}`)
   return res.json()
+}
+
+/**
+ * Çalma kontrolü uçları gövde döndürmez, yalnızca durum kodu.
+ * Fırlatmak yerine kodu geri veriyoruz: 404 (aktif cihaz yok) ve 403
+ * (Premium değil) arayüzde farklı şekilde karşılanmalı.
+ */
+export async function apiWrite(
+  token: string,
+  path: string,
+  body?: unknown,
+): Promise<{ ok: boolean; status: number }> {
+  const res = await fetch(`${API}${path}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+
+  // Gövde okunmazsa Deno bağlantıyı açık bırakır.
+  await res.body?.cancel()
+
+  return { ok: res.ok, status: res.status }
 }

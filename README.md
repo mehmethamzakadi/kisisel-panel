@@ -115,6 +115,7 @@ npx supabase secrets set \
 ```bash
 npx supabase functions deploy spotify-connect  --project-ref <ref>
 npx supabase functions deploy spotify-now      --project-ref <ref>
+npx supabase functions deploy spotify-play     --project-ref <ref>
 npx supabase functions deploy spotify-callback --no-verify-jwt --project-ref <ref>
 npx supabase functions deploy spotify-sync     --no-verify-jwt --project-ref <ref>
 ```
@@ -124,6 +125,11 @@ npx supabase functions deploy spotify-sync     --no-verify-jwt --project-ref <re
 7. Panelde Müzik kartından **Spotify'ı bağla**.
 
 Arşiv anlamlı hale gelmesi için zaman ister: ilk gün sadece son 50 şarkı görünür.
+
+**İzin listesi değişirse yeniden bağlanmak gerekir.** `_shared/spotify.ts`
+içindeki `SCOPES` büyüdüğünde eski `refresh_token` yeni izinleri kapsamaz ve
+ilgili uçlar 403 döner. Çalma kontrolü eklendiğinde olan tam da budur: Müzik
+kartından bir kez daha **Spotify'ı bağla** demek gerekir.
 
 Bağlantı hem canlı panelden hem `localhost:5173`'ten kurulabilir: `spotify-connect`
 akışın başladığı adresi `spotify_oauth_state.return_to`'ya yazar, callback oraya
@@ -168,6 +174,22 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   `Authorization` başlığı olmadan gelir. Güvenlik sınırı `state` parametresi:
   `spotify-connect`'in yazdığı satırla eşleşmeyen istek reddedilir ve state
   okunduğu anda silinir, tekrar oynatılamaz.
+- **Playlist aramasında null öğe**: Spotify'ın `search?type=playlist` yanıtında
+  `items` dizisi zaman zaman `null` eleman içeriyor. Filtrelenmezse ilk sonuç
+  null çıkar ve çalma sessizce başarısız olur — `spotify-play` bu yüzden
+  `uri`si olmayan her öğeyi eliyor. `limit` de Şubat 2026'dan beri en fazla 10.
+- **Çalma kontrolü ve cihaz**: `PUT /me/player/play`, açık bir Spotify
+  istemcisi yoksa 404 döner. Bu bir hata değil, "cihaz seç" durumudur; kart
+  `/me/player/devices` listesini gösterip seçimi `localStorage`'a yazar.
+  403 ise hesabın Premium olmadığı anlamına gelir.
+- **Ruh hali eşleştirmesi elle yazıldı**: `audio-features` kapandığı için
+  hava kodu → arama sözcüğü eşlemesi [`lib/playback.ts`](src/lib/playback.ts)
+  içinde sabit. Gemini'ye de sorulabilirdi ama çalma düğmesine basınca 3-5
+  saniye beklemek ve ara sıra 503 yemek anlamına gelirdi.
+- **Odak seansı bitiş anını saklar, süreyi değil**: `panel:focus-until`
+  içinde bitiş zaman damgası durur; sekme kapanıp açılsa da sayaç doğru
+  devam eder. Sekme kapalıyken dolmuş seans sessizce temizlenir — müziği
+  çok sonradan durdurmak şaşırtıcı olurdu.
 - **`plays` birincil anahtarı `(user_id, played_at)`**: `recently-played`
   pencereleri üst üste bindiği için senkron aynı çalmayı tekrar tekrar görür;
   tekrar yazımı engelleyen tek şey bu anahtar.
@@ -196,6 +218,7 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
 - [x] PWA (ana ekrana ekle)
 - [x] `refresh-snapshot` deploy + 15 dakikalık cron
 - [x] Spotify: çalan şarkı kartı, dinleme arşivi (`/muzik`), notlara şarkı damgası
+- [x] Havaya göre çalma, sabah rutini (Müzik kartı) ve odak seansı (Odak kartı)
 
 ## Sayfalar
 

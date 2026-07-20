@@ -4,6 +4,19 @@ import { Card } from './Card'
 import { supabase } from '../lib/supabase'
 import { connectSpotify, fetchNowPlaying } from '../lib/spotify'
 import type { NowPlaying, Play } from '../lib/spotify'
+import { currentWeather, onWeatherChange } from '../lib/bus'
+import type { WeatherNow } from '../lib/bus'
+import { describeWeather } from '../lib/weatherCodes'
+import {
+  PRESETS,
+  describeFailure,
+  pause,
+  play,
+  rememberDevice,
+  savedDevice,
+  weatherVibe,
+} from '../lib/playback'
+import type { Device } from '../lib/playback'
 
 // Çalan şarkı sık değişir ama kart da her saniye sorulmamalı.
 const POLL_MS = 20_000
@@ -15,12 +28,26 @@ const timeFormat = new Intl.DateTimeFormat('tr-TR', {
   minute: '2-digit',
 })
 
+/** Yerel saate göre YYYY-MM-DD — hatırlatma sorgusu için. */
+function today() {
+  const d = new Date()
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 10)
+}
+
 export function SpotifyCard() {
   const [now, setNow] = useState<NowPlaying | null>(null)
   const [last, setLast] = useState<Play | null>(null)
   const [total, setTotal] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
+
+  const [weather, setWeather] = useState<WeatherNow | null>(currentWeather)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [devices, setDevices] = useState<Device[] | null>(null)
+  // Cihaz seçimi hangi düğme için soruldu — seçimden sonra o çalma sürdürülür.
+  const [pending, setPending] = useState<'weather' | 'morning'>('weather')
 
   const refresh = useCallback(async () => {
     const state = await fetchNowPlaying()
@@ -74,6 +101,8 @@ export function SpotifyCard() {
     return () => clearInterval(timer)
   }, [refresh])
 
+  useEffect(() => onWeatherChange(setWeather), [])
+
   async function connect() {
     setConnecting(true)
     const message = await connectSpotify()
@@ -83,7 +112,74 @@ export function SpotifyCard() {
     }
   }
 
+  /** Günaydın özeti: hava + bugüne düşen hatırlatma sayısı. */
+  async function morningBrief() {
+    const parts: string[] = ['Günaydın']
+
+    if (weather) {
+      parts.push(`${weather.temp}° ${describeWeather(weather.code).label}`)
+    }
+
+    if (supabase) {
+      const { count } = await supabase
+        .from('notes')
+        .select('*', { count: 'exact', head: true })
+        .not('remind_on', 'is', null)
+        .lte('remind_on', today())
+
+      if (count) parts.push(`${count} hatırlatma bugün`)
+    }
+
+    return parts.join(' · ')
+  }
+
+  async function start(kind: 'weather' | 'morning', deviceId?: string) {
+    const vibe =
+      kind === 'morning'
+        ? PRESETS.morning
+        : weatherVibe(weather?.code ?? null)
+
+    setBusy(kind)
+    setNotice(null)
+
+    const result = await play(vibe.query, deviceId ?? savedDevice())
+    setBusy(null)
+
+    if (result.ok) {
+      setDevices(null)
+      if (deviceId) rememberDevice(deviceId)
+
+      const brief = kind === 'morning' ? await morningBrief() : null
+      setNotice(
+        brief
+          ? `${brief} · ${result.playlist.name}`
+          : `Çalıyor: ${result.playlist.name}`,
+      )
+
+      // Spotify'ın çalmaya başlaması bir an sürüyor; kart hemen sorarsa
+      // hâlâ eski parçayı görür.
+      setTimeout(() => void refresh(), 1500)
+      return
+    }
+
+    if (result.reason === 'no-device') {
+      // Kayıtlı cihaz kapanmış olabilir; seçim yeniden sorulur.
+      rememberDevice(null)
+      setPending(kind)
+      setDevices(result.devices)
+      setNotice(
+        result.devices.length
+          ? 'Hangi cihazda çalsın?'
+          : 'Açık bir Spotify istemcisi yok. Telefonda veya masaüstünde Spotify’ı aç.',
+      )
+      return
+    }
+
+    setNotice(describeFailure(result.reason))
+  }
+
   const playing = now?.playing ?? null
+  const vibe = weatherVibe(weather?.code ?? null)
 
   return (
     <Card
@@ -163,6 +259,54 @@ export function SpotifyCard() {
             <p className="text-sm text-muted">
               Şu an bir şey çalmıyor. Arşiv, senkron çalıştıkça dolacak.
             </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 border-t border-edge pt-3">
+            <button
+              onClick={() => void start('weather')}
+              disabled={busy !== null}
+              title={`Arama: ${vibe.query}`}
+              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-40"
+            >
+              {weather ? describeWeather(weather.code).icon : '🎵'}{' '}
+              {busy === 'weather' ? 'Aranıyor…' : vibe.label}
+            </button>
+
+            <button
+              onClick={() => void start('morning')}
+              disabled={busy !== null}
+              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-40"
+            >
+              ☀️ {busy === 'morning' ? 'Aranıyor…' : PRESETS.morning.label}
+            </button>
+
+            {now.is_playing && (
+              <button
+                onClick={() => {
+                  void pause().then(() => setTimeout(() => void refresh(), 800))
+                }}
+                className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel"
+              >
+                ❚❚ Duraklat
+              </button>
+            )}
+          </div>
+
+          {notice && <p className="text-xs text-muted">{notice}</p>}
+
+          {devices && devices.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {devices.map((device) => (
+                <li key={device.id}>
+                  <button
+                    onClick={() => void start(pending, device.id)}
+                    className="rounded-lg bg-panel px-2.5 py-1.5 text-xs hover:bg-accent-soft hover:text-accent"
+                  >
+                    {device.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
 
           {total !== null && total > 0 && (

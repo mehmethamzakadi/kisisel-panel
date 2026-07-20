@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card } from './Card'
 import { describeWeather } from '../lib/weatherCodes'
+import { weatherChanged } from '../lib/bus'
 
 export const CITIES = [
   { name: 'İstanbul', lat: 41.0082, lon: 28.9784 },
@@ -117,6 +118,16 @@ export function WeatherCard() {
 
     return () => controller.abort()
   }, [place?.lat, place?.lon])
+
+  // Müzik kartı "havaya göre çal" için hava kodunu buradan duyar.
+  useEffect(() => {
+    if (data) {
+      weatherChanged({
+        code: data.current.weather_code,
+        temp: Math.round(data.current.temperature_2m),
+      })
+    }
+  }, [data])
 
   const now = data && describeWeather(data.current.weather_code)
 
