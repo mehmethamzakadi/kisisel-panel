@@ -32,10 +32,14 @@ async function devices(token: string): Promise<Device[]> {
 }
 
 /**
- * Aramaya uyan ilk çalma listesini bulur.
+ * Aramaya uyan çalma listelerinden birini seçer.
+ *
+ * İlk sonuç sabit alınırsa aynı sorgu hep aynı listeyi, o da hep aynı ilk
+ * şarkıyı getirir; düğme "ruh hali" değil kısayol olur. Bu yüzden sonuçlar
+ * arasından rastgele seçiliyor.
  *
  * Spotify'ın playlist aramasında items dizisi zaman zaman null öğe içeriyor;
- * filtrelenmezse ilk sonuç null çıkıp çalma sessizce başarısız olur.
+ * filtrelenmezse seçim null'a düşüp çalma sessizce başarısız olur.
  * limit Şubat 2026'dan beri en fazla 10.
  */
 async function findPlaylist(token: string, query: string) {
@@ -48,11 +52,35 @@ async function findPlaylist(token: string, query: string) {
 
   if (items.length === 0) return null
 
+  const pick = items[Math.floor(Math.random() * items.length)]
+
   return {
-    uri: items[0].uri as string,
-    name: items[0].name as string,
-    url: items[0].external_urls?.spotify ?? null,
+    uri: pick.uri as string,
+    name: pick.name as string,
+    url: pick.external_urls?.spotify ?? null,
   }
+}
+
+/**
+ * Çalmanın hedefleyeceği cihazı belirler.
+ *
+ * Cihaz önceden çözülüyor çünkü karıştırma komutu da bir cihaz istiyor;
+ * "aktif cihaza gönder" varsayımıyla ilerlersek karıştırma sessizce
+ * hedefsiz kalabilir. Tek cihaz varsa aktif olmasa da o seçilir.
+ */
+async function resolveDevice(
+  token: string,
+  preferred?: string,
+): Promise<{ id: string | null; list: Device[] }> {
+  if (preferred) return { id: preferred, list: [] }
+
+  const list = await devices(token)
+  const active = list.find((d) => d.is_active)
+
+  if (active) return { id: active.id, list }
+  if (list.length === 1) return { id: list[0].id, list }
+
+  return { id: null, list }
 }
 
 Deno.serve(async (req) => {
@@ -100,18 +128,32 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'no-playlist', query }, { headers: cors })
       }
 
-      const target = body.device_id ? `?device_id=${body.device_id}` : ''
+      const device = await resolveDevice(token, body.device_id)
+
+      // Açık istemci yok. Panel cihaz seçtirebilsin diye liste de döner.
+      if (!device.id) {
+        return Response.json(
+          { error: 'no-device', devices: device.list, playlist },
+          { headers: cors },
+        )
+      }
+
+      const target = `?device_id=${device.id}`
+
+      // Karıştırma çalmadan ÖNCE açılıyor: sonra açılsa liste çoktan
+      // 1. parçadan başlamış olurdu. Başarısız olursa çalma yine sürer.
+      await apiWrite(token, `/me/player/shuffle?state=true&device_id=${device.id}`)
+
       const res = await apiWrite(token, `/me/player/play${target}`, {
         context_uri: playlist.uri,
       })
 
       if (res.ok) return Response.json({ ok: true, playlist }, { headers: cors })
 
-      // 404: açık bir Spotify istemcisi yok. Panel cihaz seçtirebilsin diye
-      // liste yanıtla birlikte döner.
+      // 404: cihaz çözüldükten sonra kapanmış olabilir.
       if (res.status === 404) {
         return Response.json(
-          { error: 'no-device', devices: await devices(token), playlist },
+          { error: 'no-device', devices: device.list, playlist },
           { headers: cors },
         )
       }

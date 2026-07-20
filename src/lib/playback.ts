@@ -27,23 +27,68 @@ export function rememberDevice(id: string | null) {
   else localStorage.removeItem(DEVICE_KEY)
 }
 
+type Mood = { label: string; queries: string[] }
+
+function pick<T>(list: T[]): T {
+  return list[Math.floor(Math.random() * list.length)]
+}
+
 /**
- * Hava koduna karşılık gelen arama sözcükleri.
+ * Hava koduna karşılık gelen ruh hali ve arama sözcükleri.
  *
  * Spotify'ın audio-features ucu (valence/energy) 2024'te kapandığı için
  * "ruh hali" artık ölçülemiyor; eşleştirme bu yüzden elle yazıldı. Aynı işi
  * Gemini'ye de yaptırabilirdik ama çalma düğmesine basınca 3-5 saniye
  * beklemek ve zaman zaman 503 yemek anlamına gelirdi.
+ *
+ * Her ruh hali için birden fazla sorgu var: tek sabit sorgu, arama sonucu
+ * rastgele seçilse bile hep aynı on listenin içinde dönmek demekti.
+ * Etiket sabit kalır (düğme yazısı zıplamasın), sorgu her tıkta değişir.
  */
-function weatherWords(code: number): string {
-  if (code <= 1) return 'güneşli enerjik'
-  if (code <= 3) return 'bulutlu indie'
-  if (code <= 48) return 'sisli ambient'
-  if (code <= 57) return 'çisenti lofi'
-  if (code <= 67) return 'yağmurlu sakin lofi'
-  if (code <= 77) return 'karlı akustik'
-  if (code <= 86) return 'yağmurlu sakin lofi'
-  return 'fırtına atmosferik'
+function weatherMood(code: number | null): Mood {
+  if (code === null) {
+    return { label: 'sakin', queries: ['sakin', 'chill', 'huzurlu akustik'] }
+  }
+  if (code <= 1) {
+    return {
+      label: 'güneşli',
+      queries: ['güneşli enerjik', 'yaz pop enerjik', 'neşeli gün', 'feel good'],
+    }
+  }
+  if (code <= 3) {
+    return {
+      label: 'bulutlu',
+      queries: ['bulutlu indie', 'indie folk sakin', 'kapalı hava indie'],
+    }
+  }
+  if (code <= 48) {
+    return {
+      label: 'sisli',
+      queries: ['sisli ambient', 'ambient atmosferik', 'downtempo'],
+    }
+  }
+  if (code <= 57) {
+    return {
+      label: 'çisenti',
+      queries: ['çisenti lofi', 'lofi hafif yağmur', 'yumuşak lofi'],
+    }
+  }
+  if (code <= 67 || (code >= 80 && code <= 86)) {
+    return {
+      label: 'yağmurlu',
+      queries: ['yağmurlu sakin', 'rainy day lofi', 'yağmur akustik', 'rainy jazz'],
+    }
+  }
+  if (code <= 77) {
+    return {
+      label: 'karlı',
+      queries: ['karlı akustik', 'kış akustik', 'snow day chill'],
+    }
+  }
+  return {
+    label: 'fırtınalı',
+    queries: ['fırtına atmosferik', 'dark ambient', 'cinematic atmosferik'],
+  }
 }
 
 function timeWords(hour: number): string {
@@ -57,18 +102,28 @@ function timeWords(hour: number): string {
 /** Hava + saatten arama sorgusu ve düğmede gösterilecek etiket. */
 export function weatherVibe(code: number | null, date = new Date()) {
   const time = timeWords(date.getHours())
-  const weather = code === null ? 'sakin' : weatherWords(code)
-  const [mood] = weather.split(' ')
+  const mood = weatherMood(code)
 
   return {
-    query: `${weather} ${time}`,
-    label: `${mood} ${time}`,
+    query: `${pick(mood.queries)} ${time}`,
+    label: `${mood.label} ${time}`,
   }
 }
 
 export const PRESETS = {
-  morning: { query: 'sabah enerjik uyanma', label: 'Sabah' },
-  focus: { query: 'odaklanma çalışma enstrümantal', label: 'Odak' },
+  morning: {
+    label: 'Sabah',
+    queries: ['sabah enerjik uyanma', 'günaydın pop', 'morning motivation'],
+  },
+  focus: {
+    label: 'Odak',
+    queries: ['odaklanma çalışma enstrümantal', 'deep focus', 'concentration'],
+  },
+}
+
+/** Her çağrıda havuzdan farklı bir sorgu — aynı listeye saplanmamak için. */
+export function presetQuery(key: keyof typeof PRESETS): string {
+  return pick(PRESETS[key].queries)
 }
 
 async function call(body: Record<string, unknown>) {

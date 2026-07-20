@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card } from './Card'
 import {
-  PRESETS,
   failureMessage,
   pause,
   play,
+  presetQuery,
   savedDevice,
 } from '../lib/playback'
 
@@ -99,7 +99,7 @@ export function FocusCard() {
     finished.current = false
     setDeadline(until)
 
-    const result = await play(PRESETS.focus.query, savedDevice())
+    const result = await play(presetQuery('focus'), savedDevice())
     setStarting(false)
 
     if (result.ok) {

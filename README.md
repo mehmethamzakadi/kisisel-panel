@@ -191,6 +191,11 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   hava kodu → arama sözcüğü eşlemesi [`lib/playback.ts`](src/lib/playback.ts)
   içinde sabit. Gemini'ye de sorulabilirdi ama çalma düğmesine basınca 3-5
   saniye beklemek ve ara sıra 503 yemek anlamına gelirdi.
+- **Çeşitlilik üç yerden geliyor**: sabit sorgu + arama sonucunun ilk öğesi +
+  listenin 1. parçası, üçü birleşince düğme hep aynı şarkıyı çalıyordu. Şimdi
+  her ruh halinin bir sorgu havuzu var, `spotify-play` sonuçlar arasından
+  rastgele seçiyor ve çalmadan **önce** karıştırmayı açıyor. Karıştırma
+  sonradan açılırsa liste çoktan baştan başlamış olur.
 - **Odak seansı bitiş anını saklar, süreyi değil**: `panel:focus-until`
   içinde bitiş zaman damgası durur; sekme kapanıp açılsa da sayaç doğru
   devam eder. Sekme kapalıyken dolmuş seans sessizce temizlenir — müziği

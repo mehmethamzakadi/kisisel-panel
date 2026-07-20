@@ -12,6 +12,7 @@ import {
   failureMessage,
   pause,
   play,
+  presetQuery,
   rememberDevice,
   savedDevice,
   weatherVibe,
@@ -134,15 +135,16 @@ export function SpotifyCard() {
   }
 
   async function start(kind: 'weather' | 'morning', deviceId?: string) {
-    const vibe =
+    // Sorgu her tıkta havuzdan yeniden seçilir; render'daki etiket sabit kalır.
+    const query =
       kind === 'morning'
-        ? PRESETS.morning
-        : weatherVibe(weather?.code ?? null)
+        ? presetQuery('morning')
+        : weatherVibe(weather?.code ?? null).query
 
     setBusy(kind)
     setNotice(null)
 
-    const result = await play(vibe.query, deviceId ?? savedDevice())
+    const result = await play(query, deviceId ?? savedDevice())
     setBusy(null)
 
     if (result.ok) {
@@ -265,7 +267,7 @@ export function SpotifyCard() {
             <button
               onClick={() => void start('weather')}
               disabled={busy !== null}
-              title={`Arama: ${vibe.query}`}
+              title="Havaya ve saate uygun bir çalma listesi bulup başlatır"
               className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-40"
             >
               {weather ? describeWeather(weather.code).icon : '🎵'}{' '}
