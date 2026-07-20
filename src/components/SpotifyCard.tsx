@@ -312,11 +312,26 @@ export function SpotifyCard() {
             </ul>
           )}
 
-          {total !== null && total > 0 && (
-            <p className="text-xs text-muted">
-              Arşivde {total.toLocaleString('tr-TR')} çalma kayıtlı.
-            </p>
-          )}
+          <div className="flex items-baseline justify-between gap-3">
+            {total !== null && total > 0 ? (
+              <p className="text-xs text-muted">
+                Arşivde {total.toLocaleString('tr-TR')} çalma kayıtlı.
+              </p>
+            ) : (
+              <span />
+            )}
+
+            {/* İzin listesi büyüdüğünde yeniden yetki vermek gerekiyor;
+                bağlıyken bunun başka yolu yok. Yeniden bağlanmak mevcut
+                kaydı ezer, önce bağlantıyı koparmaya gerek kalmaz. */}
+            <button
+              onClick={() => void connect()}
+              disabled={connecting}
+              className="shrink-0 text-xs text-muted underline-offset-2 hover:text-ink hover:underline disabled:opacity-40"
+            >
+              {connecting ? 'Yönlendiriliyor…' : 'Bağlantıyı yenile'}
+            </button>
+          </div>
         </div>
       )}
     </Card>
