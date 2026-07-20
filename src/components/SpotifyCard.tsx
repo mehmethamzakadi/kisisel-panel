@@ -57,7 +57,14 @@ export function SpotifyCard() {
       window.history.replaceState({}, '', window.location.pathname)
     }
 
-    void refresh()
+    if (result === 'ok') {
+      // Yeni bağlanmış hesabın arşivi boştur ve cron'un ilk turu 15 dakikayı
+      // bulabilir. O aralıkta kart "hiçbir şey yok" der ve bozuk görünür;
+      // bu yüzden dönüşte senkron bir kez elle tetiklenir.
+      void supabase.functions.invoke('spotify-sync').then(() => void refresh())
+    } else {
+      void refresh()
+    }
 
     // Arka plandaki sekme boşuna sorgu atmasın.
     const timer = setInterval(() => {
