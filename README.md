@@ -139,6 +139,15 @@ akışın başladığı adresi `spotify_oauth_state.return_to`'ya yazar, callbac
 döner. Liste `_shared/spotify.ts` içindeki `returnTarget`'ta; başka bir adres
 eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
 
+### Fiyat geçmişi
+
+`snapshots` üzerine yazdığı için panel yalnızca "şu an"ı biliyordu. Aynı cron
+turunda fiyatlar `rate_history` tablosuna da ekleniyor; birkaç hafta sonra
+kartlarda 7 günlük trend çizgisi ve döviz için haftalık değişim yüzdesi çıkar.
+
+Kurulum: `supabase/finance.sql` çalıştır, sonra `refresh-snapshot`'ı yeniden
+yayına al.
+
 ### Bilinen tuzaklar
 
 - **Truncgil**: `User-Agent` göndermeyen isteklere yanıt vermiyor ve TLS
@@ -196,6 +205,13 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   veriyor. Bu yanıltıcı: aynı jetonla `search` sorunsuz çalıştığı için jeton
   geçersiz sanılıyor. `spotify-play` bu yüzden player uçlarındaki 401'i
   "yeniden yetki ver" olarak yorumluyor.
+- **Fiyat geçmişi saat kovasına yazılır**: `(kind, code, bucket)` birincil
+  anahtar ve `bucket` saat başına yuvarlanıyor; `ignoreDuplicates` ile
+  15 dakikalık cron saatte dört kez denese de yalnızca ilki giriyor. Tablo
+  kendi kendini sınırlıyor ve "son kayıt neydi" sorgusu gerekmiyor.
+- **Geçmiş yazımı yan iş**: `rate_history` hata verse bile `snapshots`
+  güncellemesi sürüyor. Trend çizgisi kaybolabilir ama kartlardaki fiyat
+  bundan etkilenmemeli.
 - **Ruh hali eşleştirmesi elle yazıldı**: `audio-features` kapandığı için
   hava kodu → arama sözcüğü eşlemesi [`lib/playback.ts`](src/lib/playback.ts)
   içinde sabit. Gemini'ye de sorulabilirdi ama çalma düğmesine basınca 3-5
@@ -272,6 +288,7 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
 - [x] Havaya göre çalma, sabah rutini (Müzik kartı) ve odak seansı (Odak kartı)
 - [x] Hedef cihaz seçimi (telefonda çal), albüm kapağından panel rengi
 - [x] Mutfak müziği (yemek kartı) ve aylık dinleme özeti (Gemini, `/muzik`)
+- [x] Altın/döviz geçmişi ve 7 günlük trend çizgisi (`supabase/finance.sql`)
 - [x] Odak seansı takibi: geri sayım halkası, günlük/haftalık toplam, 7 günlük
       çubuk grafik (`supabase/focus.sql`)
 

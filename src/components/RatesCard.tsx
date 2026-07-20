@@ -1,5 +1,7 @@
 import { Card } from './Card'
+import { Sparkline } from './Sparkline'
 import { formatUpdatedAt, useSnapshot } from '../lib/useSnapshot'
+import { changePct, useHistory } from '../lib/history'
 
 type Rate = { code: string; name: string; buying: number; selling: number }
 
@@ -22,6 +24,8 @@ const names: Record<string, string> = {
 
 export function RatesCard() {
   const { data, updatedAt, error } = useSnapshot<{ rates: Rate[] }>('rates')
+  // TCMB değişim yüzdesi vermiyor; 7 günlük fark kendi geçmişimizden geliyor.
+  const history = useHistory('rate')
 
   return (
     <Card
@@ -34,7 +38,10 @@ export function RatesCard() {
       {data && (
         <div className="flex flex-1 flex-col">
           <ul className="flex flex-col gap-1">
-            {data.rates.map((rate) => (
+            {data.rates.map((rate) => {
+              const week = changePct(history[rate.code])
+
+              return (
               <li
                 key={rate.code}
                 className="flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-panel"
@@ -56,18 +63,39 @@ export function RatesCard() {
                   </span>
                 </span>
 
-                <span className="shrink-0 text-right">
-                  <span className="block text-lg font-semibold tabular-nums">
-                    {money.format(rate.selling)} ₺
-                  </span>
-                  {/* Alış/satış farkı tek satırda: hangi yönde işlem
-                      yapılacağı bilinmediği için ikisi de gösteriliyor. */}
-                  <span className="block text-xs text-muted tabular-nums">
-                    alış {money.format(rate.buying)} ₺
+                <span className="flex shrink-0 items-center gap-2.5">
+                  {/* Dar ekranda satır sıkışıyor; trend orada gizleniyor. */}
+                  <Sparkline
+                    points={history[rate.code]}
+                    className="hidden shrink-0 sm:block"
+                  />
+
+                  <span className="text-right">
+                    <span className="block text-lg font-semibold tabular-nums">
+                      {money.format(rate.selling)} ₺
+                    </span>
+                    {/* Haftalık değişim varsa alış yerine o gösteriliyor:
+                        ikisi birden satırı kalabalıklaştırıyor ve trend
+                        günlük alış fiyatından daha çok şey söylüyor. */}
+                    {week === null ? (
+                      <span className="block text-xs text-muted tabular-nums">
+                        alış {money.format(rate.buying)} ₺
+                      </span>
+                    ) : (
+                      <span
+                        className={`block text-xs tabular-nums ${
+                          week > 0 ? 'text-up' : week < 0 ? 'text-down' : 'text-muted'
+                        }`}
+                      >
+                        {week > 0 ? '▲' : week < 0 ? '▼' : '—'} %
+                        {Math.abs(week).toFixed(2)} · 7 gün
+                      </span>
+                    )}
                   </span>
                 </span>
               </li>
-            ))}
+              )
+            })}
           </ul>
 
           <p className="mt-auto border-t border-edge pt-3 text-xs text-muted">

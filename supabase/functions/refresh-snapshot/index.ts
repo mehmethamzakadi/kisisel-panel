@@ -118,6 +118,31 @@ async function fetchHeadlines(): Promise<Headline[]> {
   return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
 }
 
+/**
+ * Fiyatları geçmiş tablosuna ekler.
+ *
+ * bucket saat başına yuvarlanıyor ve (kind, code, bucket) birincil anahtar;
+ * ignoreDuplicates ile saatte yalnızca ilk yazım giriyor. 15 dakikalık cron
+ * dört kez denese de tablo şişmiyor ve "son kayıt neydi" sorgusu gerekmiyor.
+ */
+async function recordHistory(
+  supabase: ReturnType<typeof createClient>,
+  rows: { kind: string; code: string; value: number }[],
+) {
+  if (rows.length === 0) return
+
+  const bucket = new Date()
+  bucket.setMinutes(0, 0, 0)
+
+  const { error } = await supabase.from('rate_history').upsert(
+    rows.map((r) => ({ ...r, bucket: bucket.toISOString() })),
+    { onConflict: 'kind,code,bucket', ignoreDuplicates: true },
+  )
+
+  // Geçmiş yazımı yan iş: hata verse de snapshot güncellemesi sürmeli.
+  if (error) console.error('rate_history', error.message)
+}
+
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -131,12 +156,22 @@ Deno.serve(async () => {
   ])
 
   const rows = []
+  const history: { kind: string; code: string; value: number }[] = []
+
   if (rates.status === 'fulfilled') {
     rows.push({ key: 'rates', payload: { rates: rates.value } })
+    for (const r of rates.value) {
+      history.push({ kind: 'rate', code: r.code, value: r.selling })
+    }
   }
   if (gold.status === 'fulfilled') {
     rows.push({ key: 'gold', payload: { gold: gold.value } })
+    for (const g of gold.value) {
+      history.push({ kind: 'gold', code: g.code, value: g.selling })
+    }
   }
+
+  await recordHistory(supabase, history)
   if (headlines.status === 'fulfilled') {
     rows.push({ key: 'news', payload: { headlines: headlines.value } })
   }

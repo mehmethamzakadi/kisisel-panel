@@ -1,5 +1,7 @@
 import { Card } from './Card'
+import { Sparkline } from './Sparkline'
 import { formatUpdatedAt, useSnapshot } from '../lib/useSnapshot'
+import { useHistory } from '../lib/history'
 
 type Gold = { code: string; label: string; selling: number; change: number }
 
@@ -10,6 +12,8 @@ const money = new Intl.NumberFormat('tr-TR', {
 
 export function GoldCard() {
   const { data, updatedAt, error } = useSnapshot<{ gold: Gold[] }>('gold')
+  // Truncgil'in `change` alanı günlük; sparkline 7 günlük kendi geçmişimizden.
+  const history = useHistory('gold')
 
   return (
     <Card
@@ -24,7 +28,12 @@ export function GoldCard() {
           {data.gold.map((item) => (
             <li key={item.code} className="flex items-center justify-between gap-2">
               <span className="text-sm">{item.label}</span>
-              <span className="flex items-baseline gap-2">
+              <span className="flex items-center gap-2.5">
+                {/* Dar ekranda satır sıkışıyor; trend orada gizleniyor. */}
+                <Sparkline
+                  points={history[item.code]}
+                  className="hidden shrink-0 sm:block"
+                />
                 <span className="font-semibold tabular-nums">
                   {money.format(item.selling)} ₺
                 </span>
