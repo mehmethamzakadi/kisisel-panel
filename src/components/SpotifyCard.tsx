@@ -7,6 +7,7 @@ import type { NowPlaying, Play } from '../lib/spotify'
 import { currentWeather, onWeatherChange } from '../lib/bus'
 import type { WeatherNow } from '../lib/bus'
 import { describeWeather } from '../lib/weatherCodes'
+import { albumAccent, applyAccent } from '../lib/albumColor'
 import {
   PRESETS,
   failureMessage,
@@ -107,6 +108,24 @@ export function SpotifyCard() {
   }, [refresh])
 
   useEffect(() => onWeatherChange(setWeather), [])
+
+  // Panelin vurgu rengi çalan şarkının kapağından türesin. Renk çıkarılamayan
+  // kapaklarda (gri tonlu ya da CORS'a kapalı) tema varsayılanı korunur —
+  // uydurma bir renk üretmektense değiştirmemek daha iyi.
+  const art = now?.playing?.art ?? null
+
+  useEffect(() => {
+    if (!art) return
+
+    let cancelled = false
+    void albumAccent(art).then((accent) => {
+      if (!cancelled && accent) applyAccent(accent)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [art])
 
   async function connect() {
     setConnecting(true)

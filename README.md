@@ -116,9 +116,12 @@ npx supabase secrets set \
 npx supabase functions deploy spotify-connect  --project-ref <ref>
 npx supabase functions deploy spotify-now      --project-ref <ref>
 npx supabase functions deploy spotify-play     --project-ref <ref>
+npx supabase functions deploy music-recap      --project-ref <ref>
 npx supabase functions deploy spotify-callback --no-verify-jwt --project-ref <ref>
 npx supabase functions deploy spotify-sync     --no-verify-jwt --project-ref <ref>
 ```
+
+`music-recap` Gemini anahtarını kullanır; ayrı bir secret gerekmez.
 
 6. `supabase/cron.sql` yeniden çalıştırılınca `spotify-sync` de 15 dakikalık
    cron'a girer.
@@ -206,6 +209,21 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   Spotify neredeyse yalnızca Türkçe listeler döndürüyor. `weatherVibe` bu
   yüzden ikiyi ayırıyor — düğmede "yağmurlu akşam" yazar, aramaya
   `rainy day lofi evening` gider.
+- **Kapak rengi dairesel ortalamayla bulunur**: renk açısı 0-360 arası
+  dönüyor; 350° ve 10° ağırlıklı kapağın düz ortalaması 180° (tam ters renk)
+  verirdi. [`lib/albumColor.ts`](src/lib/albumColor.ts) bu yüzden açıları
+  vektöre çevirip topluyor. Pikseller doygunluk kareleriyle ağırlıklandırılır,
+  yoksa sonuç hep griye yakınsar. Gri kapakta `null` döner ve tema
+  değişmez — uydurma renk üretmektense dokunmamak doğru.
+- **Doygunluk/açıklık kapaktan alınmaz**: yalnızca renk açısı kullanılır,
+  `62% 45%` sabittir. Kapaktan gelen değerler okunabilirliği bozardı
+  (fosforlu sarı vurgu beyaz metinle görünmez olurdu).
+- **Mutfak müziği tarif adıyla aramaz**: Spotify'da "Menemen" aramak çalma
+  listesi değil alakasız sonuç getirir. Bağ öğünün saatiyle kurulur.
+- **Aylık özet ayda bir üretilir**: `panel:recap:<YYYY-AA>` anahtarıyla
+  `localStorage`'da durur; her ziyarette Gemini'ye gitmek ücretsiz kotayı
+  boşuna tüketirdi. 20 çalmanın altında özet hiç gösterilmez — üç şarkıdan
+  alışkanlık çıkarmak uydurma olurdu.
 - **Odak seansı bitiş anını saklar, süreyi değil**: `panel:focus-until`
   içinde bitiş zaman damgası durur; sekme kapanıp açılsa da sayaç doğru
   devam eder. Sekme kapalıyken dolmuş seans sessizce temizlenir — müziği
@@ -239,6 +257,8 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
 - [x] `refresh-snapshot` deploy + 15 dakikalık cron
 - [x] Spotify: çalan şarkı kartı, dinleme arşivi (`/muzik`), notlara şarkı damgası
 - [x] Havaya göre çalma, sabah rutini (Müzik kartı) ve odak seansı (Odak kartı)
+- [x] Hedef cihaz seçimi (telefonda çal), albüm kapağından panel rengi
+- [x] Mutfak müziği (yemek kartı) ve aylık dinleme özeti (Gemini, `/muzik`)
 
 ## Sayfalar
 

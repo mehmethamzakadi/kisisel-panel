@@ -152,6 +152,26 @@ export function presetQuery(key: keyof typeof PRESETS): string {
   return pick(PRESETS[key].queries)
 }
 
+/**
+ * Mutfak müziği, öğüne göre.
+ *
+ * Tarifin adıyla arama yapılmıyor: Spotify'da "Menemen" aramak çalma listesi
+ * değil alakasız sonuç getirir. Bağ, tarifin kendisiyle değil öğünün saatiyle
+ * kuruluyor — kahvaltıda ve gece atıştırmalığında aynı müzik çalmasın.
+ */
+export function cookingQuery(meal: string): string {
+  if (meal.includes('kahvaltı')) {
+    return pick(['morning coffee jazz', 'breakfast jazz', 'sunday morning'])
+  }
+  if (meal.includes('öğle')) {
+    return pick(['lunch cafe', 'bossa nova cafe', 'light jazz'])
+  }
+  if (meal.includes('gece')) {
+    return pick(['late night jazz', 'midnight chill', 'night groove'])
+  }
+  return pick(['dinner party jazz', 'cooking dinner', 'italian dinner jazz'])
+}
+
 async function call(body: Record<string, unknown>) {
   if (!supabase) return null
   const { data, error } = await supabase.functions.invoke('spotify-play', { body })

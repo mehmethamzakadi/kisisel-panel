@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { supabase } from '../lib/supabase'
 import { addIngredients, describeResult } from '../lib/shopping'
+import { cookingQuery, failureMessage, play, savedDevice } from '../lib/playback'
 
 type Suggestion = {
   name: string
@@ -56,6 +57,7 @@ export function MealCard() {
   const [open, setOpen] = useState(false)
   const [saved, setSaved] = useState(false)
   const [added, setAdded] = useState<string | null>(null)
+  const [music, setMusic] = useState<string | null>(null)
 
   // Görülen tarifler de saklanıyor; yenilemeden sonra "Başka öner" aynı
   // tarifleri tekrar önermesin.
@@ -140,6 +142,13 @@ export function MealCard() {
     if (!error) setSaved(true)
   }
 
+  /** Öğüne uygun bir mutfak listesi başlatır; hedef cihaz Müzik kartından. */
+  async function playKitchen() {
+    setMusic('…')
+    const result = await play(cookingQuery(meal), savedDevice()?.id)
+    setMusic(result.ok ? result.playlist.name : failureMessage(result))
+  }
+
   async function addToShopping() {
     if (!suggestion) return
 
@@ -202,12 +211,21 @@ export function MealCard() {
               {added ? `✓ ${added}` : '🛒 Malzemeleri ekle'}
             </button>
             <button
+              onClick={() => void playKitchen()}
+              title="Öğüne uygun bir çalma listesi başlatır"
+              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel"
+            >
+              🎵 Mutfak müziği
+            </button>
+            <button
               onClick={() => setOpen((v) => !v)}
               className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-accent hover:underline"
             >
               {open ? 'Tarifi gizle' : 'Tarifi gör'}
             </button>
           </div>
+
+          {music && <p className="text-xs text-muted">{music}</p>}
 
           {open && (
             <div className="flex flex-col gap-3 border-t border-edge pt-3 text-sm">

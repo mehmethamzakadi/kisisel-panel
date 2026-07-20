@@ -9,6 +9,14 @@ import type { Play } from '../lib/spotify'
 const WINDOW_DAYS = 90
 const ROW_LIMIT = 5000
 
+// Bu sayının altında "özet" uydurma olur: üç şarkıdan alışkanlık çıkmaz.
+const RECAP_MIN_PLAYS = 20
+
+/** Özet ayda bir değişir; her ziyarette Gemini'ye gitmenin anlamı yok. */
+function recapKey() {
+  return `panel:recap:${new Date().toISOString().slice(0, 7)}`
+}
+
 const DAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
 
 const stamp = new Intl.DateTimeFormat('tr-TR', {
@@ -41,6 +49,10 @@ export function MusicPage() {
   const [plays, setPlays] = useState<Play[] | null>(null)
   const [flashback, setFlashback] = useState<Play[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [recap, setRecap] = useState<string | null>(() =>
+    localStorage.getItem(recapKey()),
+  )
+  const [recapBusy, setRecapBusy] = useState(false)
 
   useEffect(() => {
     if (!supabase) {
@@ -96,11 +108,18 @@ export function MusicPage() {
 
     const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0))
     let peak = 0
+    let peakAt: { day: number; hour: number } | null = null
 
     for (const play of plays) {
       const at = new Date(play.played_at)
-      const cell = ++grid[weekIndex(at)][at.getHours()]
-      if (cell > peak) peak = cell
+      const day = weekIndex(at)
+      const hour = at.getHours()
+      const cell = ++grid[day][hour]
+
+      if (cell > peak) {
+        peak = cell
+        peakAt = { day, hour }
+      }
     }
 
     const monthStart = daysAgo(30).toISOString()
@@ -109,12 +128,40 @@ export function MusicPage() {
     return {
       grid,
       peak,
+      peakLabel: peakAt ? `${DAYS[peakAt.day]} ${peakAt.hour}:00` : null,
       month: month.length,
       artists: tally(month.map((p) => p.artist)).slice(0, 5),
       tracks: tally(month.map((p) => `${p.track} — ${p.artist}`)).slice(0, 5),
       since: plays.length ? plays[plays.length - 1].played_at : null,
     }
   }, [plays])
+
+  async function askRecap() {
+    if (!supabase || !stats) return
+
+    setRecapBusy(true)
+    const { data, error } = await supabase.functions.invoke('music-recap', {
+      body: {
+        total: stats.month,
+        artists: stats.artists,
+        tracks: stats.tracks,
+        peak: stats.peakLabel,
+      },
+    })
+    setRecapBusy(false)
+
+    if (error || !data?.text) {
+      setError('Özet alınamadı. Tekrar deneyin.')
+      return
+    }
+
+    setRecap(data.text as string)
+    try {
+      localStorage.setItem(recapKey(), data.text as string)
+    } catch {
+      // Depolama kapalıysa özet yine gösterilir, sadece kalıcı olmaz.
+    }
+  }
 
   return (
     <div className="mx-auto min-h-dvh w-full max-w-3xl p-4 sm:p-6">
@@ -146,6 +193,29 @@ export function MusicPage() {
 
       {stats && plays!.length > 0 && (
         <div className="flex flex-col gap-4">
+          {stats.month >= RECAP_MIN_PLAYS && (
+            <section className="rounded-2xl border border-accent/30 bg-accent-soft p-5">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold">Ayın özeti</h2>
+                <button
+                  onClick={() => void askRecap()}
+                  disabled={recapBusy}
+                  className="shrink-0 rounded-lg border border-edge/80 bg-card px-2.5 py-1 text-xs font-medium hover:bg-panel disabled:opacity-50"
+                >
+                  {recapBusy ? 'Yazılıyor…' : recap ? '✨ Yenile' : '✨ Özetle'}
+                </button>
+              </div>
+
+              {recap ? (
+                <p className="text-sm leading-relaxed">{recap}</p>
+              ) : (
+                <p className="text-sm text-muted">
+                  Son 30 günün dinleme alışkanlığını Gemini anlatsın.
+                </p>
+              )}
+            </section>
+          )}
+
           <section className="rounded-2xl border border-edge/80 bg-card p-5">
             <h2 className="mb-1 text-sm font-semibold">Ne zaman dinliyorsun?</h2>
             <p className="mb-4 text-xs text-muted">
