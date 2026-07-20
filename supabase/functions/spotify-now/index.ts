@@ -35,6 +35,10 @@ Deno.serve(async (req) => {
         // toTrack podcast bölümlerinde null döner; kart o durumda boş görünür.
         playing: json ? toTrack(json.item) : null,
         is_playing: json?.is_playing ?? false,
+        // Panel ilerleme çubuğunu bu değerden başlatıp saniyede bir kendi
+        // ilerletiyor; 20 saniyede bir sorulan uçtan gelen ham değer
+        // çubuğu zıplatırdı.
+        progress_ms: json?.progress_ms ?? null,
       },
       { headers: cors },
     )

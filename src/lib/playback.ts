@@ -153,6 +153,34 @@ export function presetQuery(key: keyof typeof PRESETS): string {
 }
 
 /**
+ * Tür seçenekleri.
+ *
+ * Etiketler tür adlarının kendisi (Deep House, Jazz…) — çevirmek yanlış olur,
+ * bunlar tür isimleri. Sorgular yine çok seçenekli: tek sabit sorgu aynı
+ * çalma listesine saplanmak demek.
+ */
+export type Genre = { label: string; queries: string[] }
+
+export const GENRES: Genre[] = [
+  { label: 'Deep House', queries: ['deep house', 'deep house essentials', 'melodic deep house'] },
+  { label: 'Melodic Techno', queries: ['melodic techno', 'melodic house and techno', 'afterlife melodic techno'] },
+  { label: 'Indie Dance', queries: ['indie dance', 'indie dance electronic', 'indie dance nu disco'] },
+  { label: 'Afro House', queries: ['afro house', 'afro house essentials', 'organic house afro'] },
+  { label: 'Nu Disco', queries: ['nu disco', 'disco funk', 'french touch disco'] },
+  { label: 'Jazz', queries: ['jazz classics', 'smooth jazz', 'modern jazz'] },
+  { label: 'Funk & Soul', queries: ['funk soul classics', 'soul classics', 'funk grooves'] },
+  { label: 'R&B', queries: ['rnb classics', 'contemporary rnb', 'smooth rnb'] },
+  { label: 'Lo-fi', queries: ['lofi beats', 'lofi hip hop study', 'chillhop'] },
+  { label: 'Ambient', queries: ['ambient', 'ambient atmospheric', 'ambient focus'] },
+  { label: 'Rock', queries: ['classic rock', 'rock anthems', 'indie rock'] },
+  { label: 'Klasik', queries: ['classical essentials', 'piano classical', 'baroque classical'] },
+]
+
+export function genreQuery(genre: Genre): string {
+  return pick(genre.queries)
+}
+
+/**
  * Mutfak müziği, öğüne göre.
  *
  * Tarifin adıyla arama yapılmıyor: Spotify'da "Menemen" aramak çalma listesi

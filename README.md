@@ -205,6 +205,12 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   her ruh halinin bir sorgu havuzu var, `spotify-play` sonuçlar arasından
   rastgele seçiyor ve çalmadan **önce** karıştırmayı açıyor. Karıştırma
   sonradan açılırsa liste çoktan baştan başlamış olur.
+- **İlerleme çubuğunu panel kendi sayar**: `spotify-now` 20 saniyede bir
+  sorulduğu için ham `progress_ms` çubuğu yirmi saniyede bir sıçratırdı. Uçtan
+  gelen değer başlangıç kabul edilip aradaki saniyeler yerelde ekleniyor,
+  sayaç yalnızca çalarken işliyor.
+- **Tür etiketleri çevrilmedi**: Deep House, Nu Disco, Lo-fi tür adlarıdır,
+  Türkçeleştirmek yanlış olurdu. Yalnızca "Klasik" istisna.
 - **Arama sorguları İngilizce, etiketler Türkçe**: sorgu Türkçe yazıldığında
   Spotify neredeyse yalnızca Türkçe listeler döndürüyor. `weatherVibe` bu
   yüzden ikiyi ayırıyor — düğmede "yağmurlu akşam" yazar, aramaya

@@ -15,6 +15,7 @@ export type NowPlaying = {
   connected: boolean
   playing?: Track | null
   is_playing?: boolean
+  progress_ms?: number | null
 }
 
 /** notes.spotify içinde duran damga — parçanın gösterilecek kadarı. */

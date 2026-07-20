@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from './Card'
 import { supabase } from '../lib/supabase'
@@ -9,8 +9,10 @@ import type { WeatherNow } from '../lib/bus'
 import { describeWeather } from '../lib/weatherCodes'
 import { albumAccent, applyAccent } from '../lib/albumColor'
 import {
+  GENRES,
   PRESETS,
   failureMessage,
+  genreQuery,
   listDevices,
   pause,
   play,
@@ -19,7 +21,7 @@ import {
   savedDevice,
   weatherVibe,
 } from '../lib/playback'
-import type { ChosenDevice, Device } from '../lib/playback'
+import type { ChosenDevice, Device, Genre } from '../lib/playback'
 
 // Çalan şarkı sık değişir ama kart da her saniye sorulmamalı.
 const POLL_MS = 20_000
@@ -38,6 +40,13 @@ function today() {
   return local.toISOString().slice(0, 10)
 }
 
+function clock(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
+type Tab = 'oneri' | 'tur'
+
 export function SpotifyCard() {
   const [now, setNow] = useState<NowPlaying | null>(null)
   const [last, setLast] = useState<Play | null>(null)
@@ -48,20 +57,26 @@ export function SpotifyCard() {
   const [weather, setWeather] = useState<WeatherNow | null>(currentWeather)
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('oneri')
+
   const [devices, setDevices] = useState<Device[] | null>(null)
   const [loadingDevices, setLoadingDevices] = useState(false)
   const [chosen, setChosen] = useState<ChosenDevice | null>(savedDevice)
   // Liste "aktif cihaz yok" hatasıyla açıldıysa seçim aynı zamanda çalmayı
   // sürdürür; kullanıcı listeyi kendi açtıysa yalnızca cihaz kaydedilir.
-  const [pending, setPending] = useState<'weather' | 'morning' | null>(null)
+  const pending = useRef<(() => void) | null>(null)
+
+  // İlerleme ayrı state: uç 20 saniyede bir sorulduğu için aradaki saniyeleri
+  // panel kendi sayıyor, yoksa çubuk yirmi saniyede bir sıçrardı.
+  const [progress, setProgress] = useState(0)
 
   const refresh = useCallback(async () => {
     const state = await fetchNowPlaying()
     setNow(state)
+    setProgress(state.progress_ms ?? 0)
 
     if (!state.connected || !supabase) return
 
-    // Hiçbir şey çalmıyorken kart boş kalmasın: arşivdeki son kayıt gösterilir.
     const [lastRes, countRes] = await Promise.all([
       supabase
         .from('plays')
@@ -82,8 +97,6 @@ export function SpotifyCard() {
       return
     }
 
-    // Yetkilendirme dönüşünde adres çubuğunda ?spotify=... kalır; okunup
-    // temizlenmezse her yenilemede aynı sonuç gösterilir.
     const result = new URLSearchParams(window.location.search).get('spotify')
     if (result) {
       if (result === 'hata') setError('Spotify bağlanamadı. Tekrar deneyin.')
@@ -92,14 +105,12 @@ export function SpotifyCard() {
 
     if (result === 'ok') {
       // Yeni bağlanmış hesabın arşivi boştur ve cron'un ilk turu 15 dakikayı
-      // bulabilir. O aralıkta kart "hiçbir şey yok" der ve bozuk görünür;
-      // bu yüzden dönüşte senkron bir kez elle tetiklenir.
+      // bulabilir; o aralıkta kart bozuk görünmesin diye senkron tetiklenir.
       void supabase.functions.invoke('spotify-sync').then(() => void refresh())
     } else {
       void refresh()
     }
 
-    // Arka plandaki sekme boşuna sorgu atmasın.
     const timer = setInterval(() => {
       if (!document.hidden) void refresh()
     }, POLL_MS)
@@ -109,10 +120,23 @@ export function SpotifyCard() {
 
   useEffect(() => onWeatherChange(setWeather), [])
 
+  const playing = now?.playing ?? null
+  const duration = playing?.duration_ms ?? 0
+
+  // Saniye sayacı yalnızca çalarken işler; duraklatılmışsa çubuk da durur.
+  useEffect(() => {
+    if (!now?.is_playing || !duration) return
+
+    const timer = setInterval(() => {
+      setProgress((p) => Math.min(duration, p + 1000))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [now?.is_playing, duration, playing?.id])
+
   // Panelin vurgu rengi çalan şarkının kapağından türesin. Renk çıkarılamayan
-  // kapaklarda (gri tonlu ya da CORS'a kapalı) tema varsayılanı korunur —
-  // uydurma bir renk üretmektense değiştirmemek daha iyi.
-  const art = now?.playing?.art ?? null
+  // kapaklarda (gri tonlu ya da CORS'a kapalı) tema varsayılanı korunur.
+  const art = playing?.art ?? null
 
   useEffect(() => {
     if (!art) return
@@ -157,14 +181,17 @@ export function SpotifyCard() {
     return parts.join(' · ')
   }
 
-  async function start(kind: 'weather' | 'morning', deviceId?: string) {
-    // Sorgu her tıkta havuzdan yeniden seçilir; render'daki etiket sabit kalır.
-    const query =
-      kind === 'morning'
-        ? presetQuery('morning')
-        : weatherVibe(weather?.code ?? null).query
-
-    setBusy(kind)
+  /**
+   * Tek çalma yolu: etiket, sorgu ve bitişte gösterilecek metin dışarıdan
+   * gelir. Hava/sabah/tür düğmelerinin hepsi buradan geçer.
+   */
+  async function start(
+    id: string,
+    query: string,
+    deviceId?: string,
+    after?: () => Promise<string | null>,
+  ) {
+    setBusy(id)
     setNotice(null)
 
     const result = await play(query, deviceId ?? chosen?.id)
@@ -172,26 +199,21 @@ export function SpotifyCard() {
 
     if (result.ok) {
       setDevices(null)
-      setPending(null)
+      pending.current = null
 
-      const brief = kind === 'morning' ? await morningBrief() : null
-      setNotice(
-        brief
-          ? `${brief} · ${result.playlist.name}`
-          : `Çalıyor: ${result.playlist.name}`,
-      )
+      const extra = after ? await after() : null
+      setNotice(extra ? `${extra} · ${result.playlist.name}` : result.playlist.name)
 
-      // Spotify'ın çalmaya başlaması bir an sürüyor; kart hemen sorarsa
-      // hâlâ eski parçayı görür.
+      // Spotify'ın çalmaya başlaması bir an sürüyor.
       setTimeout(() => void refresh(), 1500)
       return
     }
 
     if (result.reason === 'no-device') {
-      // Kayıtlı cihaz kapanmış olabilir; seçim yeniden sorulur.
       rememberDevice(null)
       setChosen(null)
-      setPending(kind)
+      // Cihaz seçilince aynı çalma denemesi sürdürülsün.
+      pending.current = () => void start(id, query, undefined, after)
       setDevices(result.devices)
       setNotice(
         result.devices.length
@@ -204,7 +226,19 @@ export function SpotifyCard() {
     setNotice(failureMessage(result))
   }
 
-  /** Cihaz listesini açar/kapatır. Liste yalnızca istendiğinde çekilir. */
+  function playWeather() {
+    const vibe = weatherVibe(weather?.code ?? null)
+    void start('weather', vibe.query)
+  }
+
+  function playMorning() {
+    void start('morning', presetQuery('morning'), undefined, morningBrief)
+  }
+
+  function playGenre(genre: Genre) {
+    void start(genre.label, genreQuery(genre))
+  }
+
   async function toggleDevices() {
     if (devices) {
       setDevices(null)
@@ -215,7 +249,7 @@ export function SpotifyCard() {
     const list = await listDevices()
     setLoadingDevices(false)
 
-    setPending(null)
+    pending.current = null
     setDevices(list)
 
     if (list.length === 0) {
@@ -232,25 +266,16 @@ export function SpotifyCard() {
     rememberDevice(next)
     setChosen(next)
     setDevices(null)
-    setNotice(`Çalma hedefi: ${device.name}`)
 
-    // Liste bir çalma denemesi yüzünden açıldıysa o deneme sürdürülür.
-    if (pending) {
-      const kind = pending
-      setPending(null)
-      void start(kind, device.id)
-    }
+    const resume = pending.current
+    pending.current = null
+
+    if (resume) resume()
+    else setNotice(`Çalma hedefi: ${device.name}`)
   }
 
-  function clearDevice() {
-    rememberDevice(null)
-    setChosen(null)
-    setDevices(null)
-    setNotice('Çalma hedefi: aktif cihaz')
-  }
-
-  const playing = now?.playing ?? null
   const vibe = weatherVibe(weather?.code ?? null)
+  const pct = duration ? Math.min(100, (progress / duration) * 100) : 0
 
   return (
     <Card
@@ -284,38 +309,76 @@ export function SpotifyCard() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-1 flex-col gap-4">
+          {/* Çalan şarkı */}
           {playing ? (
-            <a
-              href={playing.url ?? '#'}
-              target="_blank"
-              rel="noreferrer"
-              className="group flex items-center gap-3"
-            >
-              {playing.art && (
-                <img
-                  src={playing.art}
-                  alt=""
-                  className="size-14 shrink-0 rounded-lg object-cover"
-                />
-              )}
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium group-hover:text-accent">
-                  {playing.track}
-                </p>
-                <p className="truncate text-xs text-muted">{playing.artist}</p>
-                <p className="mt-1 text-xs text-accent">
-                  {now.is_playing ? '● çalıyor' : '❚❚ duraklatıldı'}
-                </p>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3.5">
+                {playing.art ? (
+                  <img
+                    src={playing.art}
+                    alt=""
+                    className="size-16 shrink-0 rounded-xl object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex size-16 shrink-0 items-center justify-center rounded-xl bg-panel text-xl">
+                    🎵
+                  </div>
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <a
+                    href={playing.url ?? '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block truncate font-medium hover:text-accent"
+                  >
+                    {playing.track}
+                  </a>
+                  <p className="truncate text-sm text-muted">{playing.artist}</p>
+                  {playing.album && (
+                    <p className="mt-0.5 truncate text-xs text-muted">
+                      {playing.album}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    void pause().then((result) => {
+                      if (!result.ok) setNotice(result.message ?? null)
+                      setTimeout(() => void refresh(), 800)
+                    })
+                  }}
+                  disabled={!now.is_playing}
+                  aria-label="Duraklat"
+                  title="Duraklat"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full border border-edge text-xs transition-colors hover:bg-panel disabled:opacity-40"
+                >
+                  {now.is_playing ? '❚❚' : '▶'}
+                </button>
               </div>
-            </a>
+
+              {duration > 0 && (
+                <div className="flex items-center gap-2 text-[11px] text-muted tabular-nums">
+                  <span>{clock(progress)}</span>
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-panel">
+                    <div
+                      className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span>{clock(duration)}</span>
+                </div>
+              )}
+            </div>
           ) : last ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3.5">
               {last.art && (
                 <img
                   src={last.art}
                   alt=""
-                  className="size-14 shrink-0 rounded-lg object-cover opacity-60"
+                  className="size-16 shrink-0 rounded-xl object-cover opacity-60"
                 />
               )}
               <div className="min-w-0">
@@ -332,60 +395,76 @@ export function SpotifyCard() {
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2 border-t border-edge pt-3">
-            <button
-              onClick={() => void start('weather')}
-              disabled={busy !== null}
-              title="Havaya ve saate uygun bir çalma listesi bulup başlatır"
-              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-40"
-            >
-              {weather ? describeWeather(weather.code).icon : '🎵'}{' '}
-              {busy === 'weather' ? 'Aranıyor…' : vibe.label}
-            </button>
-
-            <button
-              onClick={() => void start('morning')}
-              disabled={busy !== null}
-              className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-40"
-            >
-              ☀️ {busy === 'morning' ? 'Aranıyor…' : PRESETS.morning.label}
-            </button>
-
-            {now.is_playing && (
+          {/* Sekmeler: bağlama göre öneri mi, tür mü */}
+          <div className="flex gap-1 rounded-xl bg-panel p-1 text-xs font-medium">
+            {(
+              [
+                ['oneri', 'Öneri'],
+                ['tur', 'Tür'],
+              ] as [Tab, string][]
+            ).map(([id, label]) => (
               <button
-                onClick={() => {
-                  void pause().then((result) => {
-                    if (!result.ok) setNotice(result.message ?? null)
-                    setTimeout(() => void refresh(), 800)
-                  })
-                }}
-                className="rounded-lg border border-edge px-2.5 py-1.5 text-xs font-medium hover:bg-panel"
+                key={id}
+                onClick={() => setTab(id)}
+                aria-pressed={tab === id}
+                className={`flex-1 rounded-lg py-1.5 transition-colors ${
+                  tab === id
+                    ? 'bg-card text-ink shadow-sm'
+                    : 'text-muted hover:text-ink'
+                }`}
               >
-                ❚❚ Duraklat
+                {label}
               </button>
-            )}
+            ))}
           </div>
+
+          {tab === 'oneri' ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={playWeather}
+                disabled={busy !== null}
+                title="Havaya ve saate uygun bir çalma listesi bulup başlatır"
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-edge px-2.5 py-2 text-xs font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent disabled:opacity-40"
+              >
+                <span aria-hidden>
+                  {weather ? describeWeather(weather.code).icon : '🎵'}
+                </span>
+                {busy === 'weather' ? 'Aranıyor…' : vibe.label}
+              </button>
+
+              <button
+                onClick={playMorning}
+                disabled={busy !== null}
+                className="flex items-center justify-center gap-1.5 rounded-lg border border-edge px-2.5 py-2 text-xs font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent disabled:opacity-40"
+              >
+                <span aria-hidden>☀️</span>
+                {busy === 'morning' ? 'Aranıyor…' : PRESETS.morning.label}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {GENRES.map((genre) => (
+                <button
+                  key={genre.label}
+                  onClick={() => playGenre(genre)}
+                  disabled={busy !== null}
+                  className="rounded-full border border-edge px-3 py-1.5 text-xs font-medium transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent disabled:opacity-40"
+                >
+                  {busy === genre.label ? 'Aranıyor…' : genre.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {notice && <p className="text-xs text-muted">{notice}</p>}
 
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted">Hedef cihaz:</span>
-            <button
-              onClick={() => void toggleDevices()}
-              disabled={loadingDevices}
-              className="rounded-lg border border-edge px-2 py-1 font-medium hover:bg-panel disabled:opacity-40"
-            >
-              {loadingDevices ? 'Aranıyor…' : (chosen?.name ?? 'aktif cihaz')} ▾
-            </button>
-          </div>
-
           {devices && devices.length > 0 && (
-            <ul className="flex flex-wrap gap-2">
+            <ul className="flex flex-wrap gap-1.5">
               {devices.map((device) => (
                 <li key={device.id}>
                   <button
                     onClick={() => chooseDevice(device)}
-                    className={`rounded-lg px-2.5 py-1.5 text-xs hover:bg-accent-soft hover:text-accent ${
+                    className={`rounded-lg px-2.5 py-1.5 text-xs transition-colors hover:bg-accent-soft hover:text-accent ${
                       chosen?.id === device.id
                         ? 'bg-accent-soft text-accent'
                         : 'bg-panel'
@@ -396,39 +475,31 @@ export function SpotifyCard() {
                   </button>
                 </li>
               ))}
-
-              {chosen && (
-                <li>
-                  <button
-                    onClick={clearDevice}
-                    className="rounded-lg px-2.5 py-1.5 text-xs text-muted hover:text-ink"
-                  >
-                    Aktif cihazı kullan
-                  </button>
-                </li>
-              )}
             </ul>
           )}
 
-          <div className="flex items-baseline justify-between gap-3">
-            {total !== null && total > 0 ? (
-              <p className="text-xs text-muted">
-                Arşivde {total.toLocaleString('tr-TR')} çalma kayıtlı.
-              </p>
-            ) : (
-              <span />
-            )}
-
-            {/* İzin listesi büyüdüğünde yeniden yetki vermek gerekiyor;
-                bağlıyken bunun başka yolu yok. Yeniden bağlanmak mevcut
-                kaydı ezer, önce bağlantıyı koparmaya gerek kalmaz. */}
+          {/* Alt bilgi çubuğu */}
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-edge pt-3 text-xs text-muted">
             <button
-              onClick={() => void connect()}
-              disabled={connecting}
-              className="shrink-0 text-xs text-muted underline-offset-2 hover:text-ink hover:underline disabled:opacity-40"
+              onClick={() => void toggleDevices()}
+              disabled={loadingDevices}
+              className="font-medium transition-colors hover:text-ink disabled:opacity-40"
             >
-              {connecting ? 'Yönlendiriliyor…' : 'Bağlantıyı yenile'}
+              {loadingDevices ? 'Cihazlar aranıyor…' : `▾ ${chosen?.name ?? 'aktif cihaz'}`}
             </button>
+
+            <div className="flex items-center gap-3">
+              {total !== null && total > 0 && (
+                <span>{total.toLocaleString('tr-TR')} çalma</span>
+              )}
+              <button
+                onClick={() => void connect()}
+                disabled={connecting}
+                className="transition-colors hover:text-ink disabled:opacity-40"
+              >
+                {connecting ? 'Yönlendiriliyor…' : 'Yenile'}
+              </button>
+            </div>
           </div>
         </div>
       )}
