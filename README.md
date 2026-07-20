@@ -224,10 +224,17 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   `localStorage`'da durur; her ziyarette Gemini'ye gitmek ücretsiz kotayı
   boşuna tüketirdi. 20 çalmanın altında özet hiç gösterilmez — üç şarkıdan
   alışkanlık çıkarmak uydurma olurdu.
-- **Odak seansı bitiş anını saklar, süreyi değil**: `panel:focus-until`
-  içinde bitiş zaman damgası durur; sekme kapanıp açılsa da sayaç doğru
-  devam eder. Sekme kapalıyken dolmuş seans sessizce temizlenir — müziği
-  çok sonradan durdurmak şaşırtıcı olurdu.
+- **Odak seansı bitiş anını saklar, süreyi değil**: `panel:focus` içinde
+  bitiş zaman damgası, başlangıç ve hedef dakika durur; sekme kapanıp açılsa
+  da sayaç doğru devam eder. Sekme kapalıyken dolmuş seans sessizce
+  temizlenir — müziği çok sonradan durdurmak şaşırtıcı olurdu — ama yaşandığı
+  için veritabanına yine de yazılır.
+- **Odakta gerçekleşen ve hedeflenen ayrı kaydedilir**: 50 dakikalık seansın
+  20. dakikasında durdurulması "20 dakika odaklandım" demektir. `minutes`
+  gerçekleşeni, `planned_minutes` hedefi tutar; `completed` ikisinin eşit olup
+  olmadığıdır.
+- **"Vazgeç" kaydetmez**: yanlışlıkla başlatılan sayaç istatistiği bozmamalı.
+  Kaydetmek isteyen "Bitir ve kaydet" der.
 - **`plays` birincil anahtarı `(user_id, played_at)`**: `recently-played`
   pencereleri üst üste bindiği için senkron aynı çalmayı tekrar tekrar görür;
   tekrar yazımı engelleyen tek şey bu anahtar.
@@ -259,6 +266,8 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
 - [x] Havaya göre çalma, sabah rutini (Müzik kartı) ve odak seansı (Odak kartı)
 - [x] Hedef cihaz seçimi (telefonda çal), albüm kapağından panel rengi
 - [x] Mutfak müziği (yemek kartı) ve aylık dinleme özeti (Gemini, `/muzik`)
+- [x] Odak seansı takibi: geri sayım halkası, günlük/haftalık toplam, 7 günlük
+      çubuk grafik (`supabase/focus.sql`)
 
 ## Sayfalar
 
