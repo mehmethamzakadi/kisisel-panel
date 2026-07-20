@@ -74,9 +74,12 @@ export function DashboardPage({ email, demo }: DashboardPageProps) {
           kart yalnızca kendi satırını uzatır.
 
           En fazla iki sütun: üç sütunda kartlar okunamayacak kadar daralıyor.
-          items-start ise kartların satırın en uzununa göre gerilmesini önler,
-          her kart kendi doğal yüksekliğinde durur. */}
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 sm:gap-6">
+
+          items-start bilerek YOK: kartlar satırın en uzununa göre gerilsin.
+          Doğal yükseklikte bırakıldıklarında alt kenarlar hizalanmıyor ve
+          düzen tırtıklı görünüyordu. Boşluk yok olmuyor, kartın içine
+          taşınıyor — dışarıda düzensiz aralık olarak durmasından iyi. */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 sm:gap-6">
         {visible.map((id) => {
           const card = CARDS.find((c) => c.id === id)
           if (!card) return null

@@ -20,7 +20,7 @@ export function Card({
   children,
 }: CardProps) {
   return (
-    <section className="flex flex-col rounded-2xl border border-edge/80 bg-card p-6 shadow-[0_1px_2px_rgba(16,24,40,0.03),0_8px_24px_-12px_rgba(16,24,40,0.10)] transition-shadow sm:p-7 hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-12px_rgba(16,24,40,0.14)]">
+    <section className="flex h-full flex-col rounded-2xl border border-edge/80 bg-card p-6 shadow-[0_1px_2px_rgba(16,24,40,0.03),0_8px_24px_-12px_rgba(16,24,40,0.10)] transition-shadow sm:p-7 hover:shadow-[0_1px_2px_rgba(16,24,40,0.04),0_12px_32px_-12px_rgba(16,24,40,0.14)]">
       <header className="mb-5 flex items-center justify-between gap-3">
         <h2 className="flex min-w-0 items-center gap-2.5">
           {icon && (
