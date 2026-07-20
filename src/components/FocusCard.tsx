@@ -99,7 +99,7 @@ export function FocusCard() {
     finished.current = false
     setDeadline(until)
 
-    const result = await play(presetQuery('focus'), savedDevice())
+    const result = await play(presetQuery('focus'), savedDevice()?.id)
     setStarting(false)
 
     if (result.ok) {

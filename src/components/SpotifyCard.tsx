@@ -10,6 +10,7 @@ import { describeWeather } from '../lib/weatherCodes'
 import {
   PRESETS,
   failureMessage,
+  listDevices,
   pause,
   play,
   presetQuery,
@@ -17,7 +18,7 @@ import {
   savedDevice,
   weatherVibe,
 } from '../lib/playback'
-import type { Device } from '../lib/playback'
+import type { ChosenDevice, Device } from '../lib/playback'
 
 // Çalan şarkı sık değişir ama kart da her saniye sorulmamalı.
 const POLL_MS = 20_000
@@ -47,8 +48,11 @@ export function SpotifyCard() {
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [devices, setDevices] = useState<Device[] | null>(null)
-  // Cihaz seçimi hangi düğme için soruldu — seçimden sonra o çalma sürdürülür.
-  const [pending, setPending] = useState<'weather' | 'morning'>('weather')
+  const [loadingDevices, setLoadingDevices] = useState(false)
+  const [chosen, setChosen] = useState<ChosenDevice | null>(savedDevice)
+  // Liste "aktif cihaz yok" hatasıyla açıldıysa seçim aynı zamanda çalmayı
+  // sürdürür; kullanıcı listeyi kendi açtıysa yalnızca cihaz kaydedilir.
+  const [pending, setPending] = useState<'weather' | 'morning' | null>(null)
 
   const refresh = useCallback(async () => {
     const state = await fetchNowPlaying()
@@ -144,12 +148,12 @@ export function SpotifyCard() {
     setBusy(kind)
     setNotice(null)
 
-    const result = await play(query, deviceId ?? savedDevice())
+    const result = await play(query, deviceId ?? chosen?.id)
     setBusy(null)
 
     if (result.ok) {
       setDevices(null)
-      if (deviceId) rememberDevice(deviceId)
+      setPending(null)
 
       const brief = kind === 'morning' ? await morningBrief() : null
       setNotice(
@@ -167,6 +171,7 @@ export function SpotifyCard() {
     if (result.reason === 'no-device') {
       // Kayıtlı cihaz kapanmış olabilir; seçim yeniden sorulur.
       rememberDevice(null)
+      setChosen(null)
       setPending(kind)
       setDevices(result.devices)
       setNotice(
@@ -178,6 +183,51 @@ export function SpotifyCard() {
     }
 
     setNotice(failureMessage(result))
+  }
+
+  /** Cihaz listesini açar/kapatır. Liste yalnızca istendiğinde çekilir. */
+  async function toggleDevices() {
+    if (devices) {
+      setDevices(null)
+      return
+    }
+
+    setLoadingDevices(true)
+    const list = await listDevices()
+    setLoadingDevices(false)
+
+    setPending(null)
+    setDevices(list)
+
+    if (list.length === 0) {
+      // Spotify yalnızca uyanık istemcileri listeler; kapalı telefon görünmez.
+      setNotice(
+        'Açık cihaz bulunamadı. Telefonunda Spotify’ı açıp bir şey çal, sonra tekrar dene.',
+      )
+    }
+  }
+
+  function chooseDevice(device: Device) {
+    const next = { id: device.id, name: device.name }
+
+    rememberDevice(next)
+    setChosen(next)
+    setDevices(null)
+    setNotice(`Çalma hedefi: ${device.name}`)
+
+    // Liste bir çalma denemesi yüzünden açıldıysa o deneme sürdürülür.
+    if (pending) {
+      const kind = pending
+      setPending(null)
+      void start(kind, device.id)
+    }
+  }
+
+  function clearDevice() {
+    rememberDevice(null)
+    setChosen(null)
+    setDevices(null)
+    setNotice('Çalma hedefi: aktif cihaz')
   }
 
   const playing = now?.playing ?? null
@@ -299,18 +349,45 @@ export function SpotifyCard() {
 
           {notice && <p className="text-xs text-muted">{notice}</p>}
 
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted">Hedef cihaz:</span>
+            <button
+              onClick={() => void toggleDevices()}
+              disabled={loadingDevices}
+              className="rounded-lg border border-edge px-2 py-1 font-medium hover:bg-panel disabled:opacity-40"
+            >
+              {loadingDevices ? 'Aranıyor…' : (chosen?.name ?? 'aktif cihaz')} ▾
+            </button>
+          </div>
+
           {devices && devices.length > 0 && (
             <ul className="flex flex-wrap gap-2">
               {devices.map((device) => (
                 <li key={device.id}>
                   <button
-                    onClick={() => void start(pending, device.id)}
-                    className="rounded-lg bg-panel px-2.5 py-1.5 text-xs hover:bg-accent-soft hover:text-accent"
+                    onClick={() => chooseDevice(device)}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs hover:bg-accent-soft hover:text-accent ${
+                      chosen?.id === device.id
+                        ? 'bg-accent-soft text-accent'
+                        : 'bg-panel'
+                    }`}
                   >
                     {device.name}
+                    {device.is_active && ' ●'}
                   </button>
                 </li>
               ))}
+
+              {chosen && (
+                <li>
+                  <button
+                    onClick={clearDevice}
+                    className="rounded-lg px-2.5 py-1.5 text-xs text-muted hover:text-ink"
+                  >
+                    Aktif cihazı kullan
+                  </button>
+                </li>
+              )}
             </ul>
           )}
 

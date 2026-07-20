@@ -18,12 +18,24 @@ export type PlayResult =
 /** Cihaz seçimi kalıcı: her çalmada yeniden seçtirmek can sıkıcı olurdu. */
 const DEVICE_KEY = 'panel:spotify-device'
 
-export function savedDevice() {
-  return localStorage.getItem(DEVICE_KEY)
+export type ChosenDevice = { id: string; name: string }
+
+/** Ad da saklanıyor: id opak, kartta "iPhone" yazabilmek gerekiyor. */
+export function savedDevice(): ChosenDevice | null {
+  const raw = localStorage.getItem(DEVICE_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed?.id ? (parsed as ChosenDevice) : null
+  } catch {
+    // Önceki sürüm düz id yazıyordu; adı bilinmiyor ama seçim korunur.
+    return { id: raw, name: 'Kayıtlı cihaz' }
+  }
 }
 
-export function rememberDevice(id: string | null) {
-  if (id) localStorage.setItem(DEVICE_KEY, id)
+export function rememberDevice(device: ChosenDevice | null) {
+  if (device) localStorage.setItem(DEVICE_KEY, JSON.stringify(device))
   else localStorage.removeItem(DEVICE_KEY)
 }
 

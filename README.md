@@ -182,6 +182,12 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   istemcisi yoksa 404 döner. Bu bir hata değil, "cihaz seç" durumudur; kart
   `/me/player/devices` listesini gösterip seçimi `localStorage`'a yazar.
   403 ise hesabın Premium olmadığı anlamına gelir.
+- **Hedef cihaz elle seçilebilir olmalı**: yalnızca "aktif cihaza gönder"
+  denseydi masaüstü açıkken telefonda çalmak imkânsız olurdu. Kart bu yüzden
+  kalıcı bir cihaz seçici gösteriyor; seçim (`id` + ad) `localStorage`'da
+  durur ve `play` çağrısına `device_id` olarak geçer, bu da çalmayı o cihaza
+  aktarır. `/me/player/devices` yalnızca **uyanık** istemcileri döndürür —
+  kapalı bir telefon listede görünmez, önce uygulamayı açmak gerekir.
 - **İzin eksikse player uçları 401 döner, 403 değil**: alışılmış olan yetersiz
   izinde 403'tür, ama Spotify `/me/player/*` için 401 ("Permissions missing")
   veriyor. Bu yanıltıcı: aynı jetonla `search` sorunsuz çalıştığı için jeton
