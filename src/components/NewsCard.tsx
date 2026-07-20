@@ -32,11 +32,15 @@ export function NewsCard() {
       error={error}
       meta={formatUpdatedAt(updatedAt)}
     >
-      <ul className="flex flex-col divide-y divide-edge">
-        {headlines.map((item, i) => {
+      {/* Kart tam genişlikte duruyor; başlıklar tek sütuna dizilse kart
+          diğerlerinin iki katı uzardı. Eşit sütunlara yayılıyorlar.
+          Ayırıcı olarak divide-y kullanılamaz — grid'de satır/sütun
+          sınırlarını takip etmez; her öğe kendi üst çizgisini taşıyor. */}
+      <ul className="grid gap-x-6 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-4">
+        {headlines.map((item) => {
           const ago = timeAgo(item.date)
           return (
-            <li key={item.link} className={i === 0 ? 'pb-3.5' : 'py-3.5 last:pb-0'}>
+            <li key={item.link} className="border-t border-edge pt-3.5">
               <a
                 href={item.link}
                 target="_blank"

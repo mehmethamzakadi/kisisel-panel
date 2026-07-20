@@ -22,17 +22,25 @@ export type CardId =
   | 'spotify'
   | 'focus'
 
+type CardDef = {
+  id: CardId
+  label: string
+  /** Tüm satırı kaplar. Listesi uzun olan kartlar dikey yerine yatay yayılır. */
+  wide?: boolean
+  render: () => ReactNode
+}
+
 /**
- * Sıra bilinçli: önce "dışarısı" (hava, gündem), sonra o anki ortam (müzik,
- * yemek), sonra takip edilen sayılar (altın, döviz), sonra kişisel iş kartları
- * (not, alışveriş, odak), en sonda kapanış olarak günün sözü.
+ * Sıra bilinçli: önce o anki ortam (hava, müzik, yemek), sonra takip edilen
+ * sayılar (altın, döviz), sonra kişisel iş kartları (not, alışveriş, odak),
+ * kapanışta günün sözü. Gündem en altta ve tam genişlikte: sekiz başlık
+ * dar bir sütuna dizilince kart diğerlerinin iki katı uzuyordu.
  *
  * Bu yalnızca **varsayılan**; kullanıcının kayıtlı tercihi varsa o kazanır
  * (bkz. reconcile). Varsayılana dönmek "Kartları düzenle" panelinden yapılır.
  */
-export const CARDS: { id: CardId; label: string; render: () => ReactNode }[] = [
+export const CARDS: CardDef[] = [
   { id: 'weather', label: 'Hava Durumu', render: () => <WeatherCard /> },
-  { id: 'news', label: 'Gündem', render: () => <NewsCard /> },
   { id: 'spotify', label: 'Müzik', render: () => <SpotifyCard /> },
   { id: 'meal', label: 'Bugün Ne Yesem?', render: () => <MealCard /> },
   { id: 'gold', label: 'Altın', render: () => <GoldCard /> },
@@ -40,7 +48,10 @@ export const CARDS: { id: CardId; label: string; render: () => ReactNode }[] = [
   { id: 'quicknote', label: 'Hızlı Not', render: () => <QuickNoteCard /> },
   { id: 'shopping', label: 'Alışveriş', render: () => <ShoppingCard /> },
   { id: 'focus', label: 'Odak', render: () => <FocusCard /> },
-  { id: 'quote', label: 'Günün Sözü', render: () => <QuoteCard /> },
+  // Bu ikisi tam genişlikte: geriye kalan sekiz kart tam dört satır yapıyor,
+  // böylece tek başına kalıp yanında boşluk bırakan kart olmuyor.
+  { id: 'quote', label: 'Günün Sözü', wide: true, render: () => <QuoteCard /> },
+  { id: 'news', label: 'Gündem', wide: true, render: () => <NewsCard /> },
 ]
 
 export const DEFAULT_ORDER = CARDS.map((c) => c.id)

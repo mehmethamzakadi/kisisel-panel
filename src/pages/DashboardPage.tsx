@@ -73,12 +73,19 @@ export function DashboardPage({ email, demo }: DashboardPageProps) {
           ekranda zıplıyordu. Grid'de her kart kendi hücresinde kalır, büyüyen
           kart yalnızca kendi satırını uzatır.
 
-          items-start: kartlar satırın en uzununa göre gerilmesin, kendi
-          doğal yükseklikleri kadar dursun. */}
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 xl:grid-cols-3 sm:gap-6">
+          En fazla iki sütun: üç sütunda kartlar okunamayacak kadar daralıyor.
+          items-start ise kartların satırın en uzununa göre gerilmesini önler,
+          her kart kendi doğal yüksekliğinde durur. */}
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 sm:gap-6">
         {visible.map((id) => {
           const card = CARDS.find((c) => c.id === id)
-          return card ? <div key={id}>{card.render()}</div> : null
+          if (!card) return null
+
+          return (
+            <div key={id} className={card.wide ? 'md:col-span-2' : undefined}>
+              {card.render()}
+            </div>
+          )
         })}
       </div>
     </div>
