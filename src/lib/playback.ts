@@ -47,51 +47,57 @@ function pick<T>(list: T[]): T {
  */
 function weatherMood(code: number | null): Mood {
   if (code === null) {
-    return { label: 'sakin', queries: ['sakin', 'chill', 'huzurlu akustik'] }
+    return { label: 'sakin', queries: ['calm', 'chill', 'mellow acoustic'] }
   }
   if (code <= 1) {
     return {
       label: 'güneşli',
-      queries: ['güneşli enerjik', 'yaz pop enerjik', 'neşeli gün', 'feel good'],
+      queries: ['sunny upbeat', 'summer pop energetic', 'feel good', 'good vibes'],
     }
   }
   if (code <= 3) {
     return {
       label: 'bulutlu',
-      queries: ['bulutlu indie', 'indie folk sakin', 'kapalı hava indie'],
+      queries: ['cloudy indie', 'indie folk mellow', 'overcast indie'],
     }
   }
   if (code <= 48) {
     return {
       label: 'sisli',
-      queries: ['sisli ambient', 'ambient atmosferik', 'downtempo'],
+      queries: ['foggy ambient', 'atmospheric ambient', 'downtempo'],
     }
   }
   if (code <= 57) {
     return {
       label: 'çisenti',
-      queries: ['çisenti lofi', 'lofi hafif yağmur', 'yumuşak lofi'],
+      queries: ['drizzle lofi', 'light rain lofi', 'soft lofi'],
     }
   }
   if (code <= 67 || (code >= 80 && code <= 86)) {
     return {
       label: 'yağmurlu',
-      queries: ['yağmurlu sakin', 'rainy day lofi', 'yağmur akustik', 'rainy jazz'],
+      queries: ['rainy day', 'rainy day lofi', 'rain acoustic', 'rainy jazz'],
     }
   }
   if (code <= 77) {
     return {
       label: 'karlı',
-      queries: ['karlı akustik', 'kış akustik', 'snow day chill'],
+      queries: ['snowy acoustic', 'winter acoustic', 'snow day chill'],
     }
   }
   return {
     label: 'fırtınalı',
-    queries: ['fırtına atmosferik', 'dark ambient', 'cinematic atmosferik'],
+    queries: ['storm atmospheric', 'dark ambient', 'cinematic atmospheric'],
   }
 }
 
-function timeWords(hour: number): string {
+/**
+ * Etiket Türkçe (arayüz Türkçe), sorgu İngilizce.
+ *
+ * Sorgular Türkçe yazıldığında Spotify neredeyse yalnızca Türkçe listeler
+ * döndürüyor; havuz İngilizce olunca katalog belirgin biçimde genişliyor.
+ */
+function timeLabel(hour: number): string {
   if (hour < 6) return 'gece'
   if (hour < 11) return 'sabah'
   if (hour < 17) return 'gündüz'
@@ -99,25 +105,33 @@ function timeWords(hour: number): string {
   return 'gece'
 }
 
+function timeQuery(hour: number): string {
+  if (hour < 6) return 'night'
+  if (hour < 11) return 'morning'
+  if (hour < 17) return 'afternoon'
+  if (hour < 22) return 'evening'
+  return 'night'
+}
+
 /** Hava + saatten arama sorgusu ve düğmede gösterilecek etiket. */
 export function weatherVibe(code: number | null, date = new Date()) {
-  const time = timeWords(date.getHours())
+  const hour = date.getHours()
   const mood = weatherMood(code)
 
   return {
-    query: `${pick(mood.queries)} ${time}`,
-    label: `${mood.label} ${time}`,
+    query: `${pick(mood.queries)} ${timeQuery(hour)}`,
+    label: `${mood.label} ${timeLabel(hour)}`,
   }
 }
 
 export const PRESETS = {
   morning: {
     label: 'Sabah',
-    queries: ['sabah enerjik uyanma', 'günaydın pop', 'morning motivation'],
+    queries: ['morning energy wake up', 'good morning pop', 'morning motivation'],
   },
   focus: {
     label: 'Odak',
-    queries: ['odaklanma çalışma enstrümantal', 'deep focus', 'concentration'],
+    queries: ['deep focus instrumental', 'deep focus', 'concentration instrumental'],
   },
 }
 

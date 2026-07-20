@@ -196,6 +196,10 @@ eklemeden localhost portunu değiştirirsen dönüş canlı panele düşer.
   her ruh halinin bir sorgu havuzu var, `spotify-play` sonuçlar arasından
   rastgele seçiyor ve çalmadan **önce** karıştırmayı açıyor. Karıştırma
   sonradan açılırsa liste çoktan baştan başlamış olur.
+- **Arama sorguları İngilizce, etiketler Türkçe**: sorgu Türkçe yazıldığında
+  Spotify neredeyse yalnızca Türkçe listeler döndürüyor. `weatherVibe` bu
+  yüzden ikiyi ayırıyor — düğmede "yağmurlu akşam" yazar, aramaya
+  `rainy day lofi evening` gider.
 - **Odak seansı bitiş anını saklar, süreyi değil**: `panel:focus-until`
   içinde bitiş zaman damgası durur; sekme kapanıp açılsa da sayaç doğru
   devam eder. Sekme kapalıyken dolmuş seans sessizce temizlenir — müziği
