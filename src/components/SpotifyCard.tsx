@@ -9,7 +9,7 @@ import type { WeatherNow } from '../lib/bus'
 import { describeWeather } from '../lib/weatherCodes'
 import {
   PRESETS,
-  describeFailure,
+  failureMessage,
   pause,
   play,
   rememberDevice,
@@ -175,7 +175,7 @@ export function SpotifyCard() {
       return
     }
 
-    setNotice(describeFailure(result.reason))
+    setNotice(failureMessage(result))
   }
 
   const playing = now?.playing ?? null

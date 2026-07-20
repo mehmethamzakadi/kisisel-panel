@@ -87,10 +87,8 @@ Deno.serve(async (req) => {
 
       const playlist = await findPlaylist(token, query)
       if (!playlist) {
-        return Response.json(
-          { error: 'no-playlist', query },
-          { status: 404, headers: cors },
-        )
+        // 200: hata gövdesi panele ulaşsın diye (bkz. aşağıdaki catch notu).
+        return Response.json({ error: 'no-playlist', query }, { headers: cors })
       }
 
       const target = body.device_id ? `?device_id=${body.device_id}` : ''
@@ -115,14 +113,18 @@ Deno.serve(async (req) => {
       }
 
       return Response.json(
-        { error: `Spotify ${res.status}` },
-        { status: 502, headers: cors },
+        { error: 'failed', detail: `Spotify ${res.status}` },
+        { headers: cors },
       )
     }
 
     return Response.json({ devices: await devices(token) }, { headers: cors })
   } catch (e) {
     const message = String(e)
+
+    // Sunucu günlüğünde tam metin dursun; panelde kısaltılmış hali gösterilir.
+    console.error('spotify-play', message)
+
     if (message.includes(NOT_CONNECTED)) {
       return Response.json({ error: 'not-connected' }, { headers: cors })
     }
@@ -130,6 +132,9 @@ Deno.serve(async (req) => {
     if (message.includes('403')) {
       return Response.json({ error: 'scope-missing' }, { headers: cors })
     }
-    return Response.json({ error: message }, { status: 502, headers: cors })
+
+    // Bilinmeyen hatalar da 200 döner: 502 dönseydi supabase-js yanıtı hata
+    // sayar, gövdeyi atar ve sebep panele hiç ulaşmazdı.
+    return Response.json({ error: 'failed', detail: message }, { headers: cors })
   }
 })

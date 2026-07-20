@@ -178,7 +178,14 @@ export async function api(token: string, path: string) {
   })
 
   if (res.status === 204) return null
-  if (!res.ok) throw new Error(`Spotify ${path} ${res.status}`)
+
+  if (!res.ok) {
+    // Gövde okunmadan fırlatılırsa bağlantı açık kalır ve edge runtime
+    // izolatı sızdırılmış kaynakla erken düşürebilir.
+    await res.body?.cancel()
+    throw new Error(`Spotify ${path} ${res.status}`)
+  }
+
   return res.json()
 }
 

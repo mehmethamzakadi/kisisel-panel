@@ -103,7 +103,7 @@ export async function play(
     return { ok: false, reason: data.error }
   }
 
-  return { ok: false, reason: 'failed', detail: String(data.error ?? '') }
+  return { ok: false, reason: 'failed', detail: String(data.detail ?? data.error ?? '') }
 }
 
 export async function pause(): Promise<boolean> {
@@ -116,8 +116,12 @@ export async function listDevices(): Promise<Device[]> {
   return (data?.devices ?? []) as Device[]
 }
 
-/** Kullanıcıya gösterilecek hata metni — sebepler farklı çözümler gerektiriyor. */
-export function describeFailure(reason: string): string {
+/**
+ * Kullanıcıya gösterilecek hata metni — sebepler farklı çözümler gerektiriyor.
+ * Tanınmayan hatalarda sunucudan gelen ham metin de gösterilir: "başlatılamadı"
+ * tek başına hiçbir şey söylemiyor.
+ */
+export function describeFailure(reason: string, detail?: string): string {
   switch (reason) {
     case 'premium-required':
       return 'Çalma kontrolü yalnızca Spotify Premium ile çalışıyor.'
@@ -128,6 +132,17 @@ export function describeFailure(reason: string): string {
     case 'no-playlist':
       return 'Bu ruh haline uygun çalma listesi bulunamadı.'
     default:
-      return 'Çalma başlatılamadı.'
+      return detail
+        ? `Çalma başlatılamadı — ${detail}`
+        : 'Çalma başlatılamadı.'
   }
+}
+
+/** PlayResult'tan doğrudan mesaj üretir; detay alanı yalnızca bazı dallarda var. */
+export function failureMessage(result: PlayResult): string {
+  if (result.ok) return ''
+  return describeFailure(
+    result.reason,
+    'detail' in result ? result.detail : undefined,
+  )
 }

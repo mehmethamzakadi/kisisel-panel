@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card } from './Card'
 import {
   PRESETS,
-  describeFailure,
+  failureMessage,
   pause,
   play,
   savedDevice,
@@ -107,7 +107,7 @@ export function FocusCard() {
     } else if (result.reason === 'no-device') {
       setNotice('Sayaç başladı ama açık bir Spotify istemcisi yok.')
     } else {
-      setNotice(`Sayaç başladı. ${describeFailure(result.reason)}`)
+      setNotice(`Sayaç başladı. ${failureMessage(result)}`)
     }
   }
 
