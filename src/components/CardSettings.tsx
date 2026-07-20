@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CARDS, type CardId, type CardPrefs } from '../lib/cards'
+import { CARDS, reconcile, type CardId, type CardPrefs } from '../lib/cards'
 
 type Props = {
   prefs: CardPrefs
@@ -10,10 +10,9 @@ type Props = {
 /**
  * Kartların sırasını ve görünürlüğünü düzenler.
  *
- * Sürükleme kartların kendisi yerine bu listede yapılıyor: panel masonry
- * (sütun akışı) düzeninde ve orada sürüklenen kartın bırakılacağı yeri
- * hesaplamak hem kırılgan hem de dokunmatikte zor. Kompakt liste her iki
- * durumda da güvenilir çalışıyor.
+ * Sürükleme kartların kendisi yerine bu listede yapılıyor: panelde sürüklenen
+ * kartın bırakılacağı yeri hesaplamak hem kırılgan hem de dokunmatikte zor.
+ * Kompakt liste her iki durumda da güvenilir çalışıyor.
  */
 export function CardSettings({ prefs, onChange, onClose }: Props) {
   const [dragging, setDragging] = useState<CardId | null>(null)
@@ -47,12 +46,23 @@ export function CardSettings({ prefs, onChange, onClose }: Props) {
             Sürükleyerek sırala, göz simgesiyle gizle.
           </p>
         </div>
-        <button
-          onClick={onClose}
-          className="h-9 rounded-xl border border-edge/80 px-3 text-sm font-medium transition-colors hover:bg-panel"
-        >
-          Bitti
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Kayıtlı tercih varsayılanı ezdiği için, önerilen sıra
+              değiştiğinde kullanıcı onu ancak buradan görebiliyor. */}
+          <button
+            onClick={() => onChange(reconcile(null))}
+            title="Önerilen sıraya döner ve gizli kartları geri getirir"
+            className="h-9 rounded-xl px-3 text-sm font-medium text-muted transition-colors hover:bg-panel hover:text-ink"
+          >
+            Varsayılana dön
+          </button>
+          <button
+            onClick={onClose}
+            className="h-9 rounded-xl border border-edge/80 px-3 text-sm font-medium transition-colors hover:bg-panel"
+          >
+            Bitti
+          </button>
+        </div>
       </div>
 
       <ul className="flex flex-col gap-1.5">

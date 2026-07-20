@@ -50,7 +50,7 @@ export function DashboardPage({ email, demo }: DashboardPageProps) {
   const visible = prefs.order.filter((id) => !prefs.hidden.includes(id))
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto min-h-dvh w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       <TopBar
         email={email}
         demo={demo}
@@ -66,9 +66,16 @@ export function DashboardPage({ email, demo }: DashboardPageProps) {
         />
       )}
 
-      {/* Kartlar farklı yükseklikte; grid yerine sütun akışı kullanılıyor ki
-          kısa kartların altında boşluk kalmasın. */}
-      <div className="columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5 [&>*]:break-inside-avoid">
+      {/* Grid, sütun akışı (masonry) değil.
+          Sütun akışında içerik yukarıdan aşağı akıp bir sonraki sütuna
+          sarıyor; bir kart büyüdüğünde (Müzik kartında cihaz listesi açılınca
+          gibi) ondan sonraki bütün kartlar yeniden akıyor ve sütun değiştirip
+          ekranda zıplıyordu. Grid'de her kart kendi hücresinde kalır, büyüyen
+          kart yalnızca kendi satırını uzatır.
+
+          items-start: kartlar satırın en uzununa göre gerilmesin, kendi
+          doğal yükseklikleri kadar dursun. */}
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 xl:grid-cols-3 sm:gap-6">
         {visible.map((id) => {
           const card = CARDS.find((c) => c.id === id)
           return card ? <div key={id}>{card.render()}</div> : null

@@ -22,17 +22,25 @@ export type CardId =
   | 'spotify'
   | 'focus'
 
+/**
+ * Sıra bilinçli: önce "dışarısı" (hava, gündem), sonra o anki ortam (müzik,
+ * yemek), sonra takip edilen sayılar (altın, döviz), sonra kişisel iş kartları
+ * (not, alışveriş, odak), en sonda kapanış olarak günün sözü.
+ *
+ * Bu yalnızca **varsayılan**; kullanıcının kayıtlı tercihi varsa o kazanır
+ * (bkz. reconcile). Varsayılana dönmek "Kartları düzenle" panelinden yapılır.
+ */
 export const CARDS: { id: CardId; label: string; render: () => ReactNode }[] = [
   { id: 'weather', label: 'Hava Durumu', render: () => <WeatherCard /> },
-  { id: 'meal', label: 'Bugün Ne Yesem?', render: () => <MealCard /> },
-  { id: 'quicknote', label: 'Hızlı Not', render: () => <QuickNoteCard /> },
-  { id: 'spotify', label: 'Müzik', render: () => <SpotifyCard /> },
-  { id: 'focus', label: 'Odak', render: () => <FocusCard /> },
-  { id: 'shopping', label: 'Alışveriş', render: () => <ShoppingCard /> },
-  { id: 'rates', label: 'Döviz', render: () => <RatesCard /> },
-  { id: 'gold', label: 'Altın', render: () => <GoldCard /> },
-  { id: 'quote', label: 'Günün Sözü', render: () => <QuoteCard /> },
   { id: 'news', label: 'Gündem', render: () => <NewsCard /> },
+  { id: 'spotify', label: 'Müzik', render: () => <SpotifyCard /> },
+  { id: 'meal', label: 'Bugün Ne Yesem?', render: () => <MealCard /> },
+  { id: 'gold', label: 'Altın', render: () => <GoldCard /> },
+  { id: 'rates', label: 'Döviz', render: () => <RatesCard /> },
+  { id: 'quicknote', label: 'Hızlı Not', render: () => <QuickNoteCard /> },
+  { id: 'shopping', label: 'Alışveriş', render: () => <ShoppingCard /> },
+  { id: 'focus', label: 'Odak', render: () => <FocusCard /> },
+  { id: 'quote', label: 'Günün Sözü', render: () => <QuoteCard /> },
 ]
 
 export const DEFAULT_ORDER = CARDS.map((c) => c.id)
