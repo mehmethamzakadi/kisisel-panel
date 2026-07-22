@@ -4,8 +4,13 @@ import { Card } from './Card'
 import { supabase } from '../lib/supabase'
 import { connectSpotify, fetchNowPlaying } from '../lib/spotify'
 import type { NowPlaying, Play } from '../lib/spotify'
-import { currentWeather, onWeatherChange } from '../lib/bus'
-import type { WeatherNow } from '../lib/bus'
+import {
+  currentFocus,
+  currentWeather,
+  onFocusChange,
+  onWeatherChange,
+} from '../lib/bus'
+import type { FocusNow, WeatherNow } from '../lib/bus'
 import { describeWeather } from '../lib/weatherCodes'
 import { albumAccent, applyAccent } from '../lib/albumColor'
 import {
@@ -58,6 +63,7 @@ export function SpotifyCard() {
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('oneri')
+  const [focus, setFocus] = useState<FocusNow | null>(currentFocus)
 
   const [devices, setDevices] = useState<Device[] | null>(null)
   const [loadingDevices, setLoadingDevices] = useState(false)
@@ -119,6 +125,18 @@ export function SpotifyCard() {
   }, [refresh])
 
   useEffect(() => onWeatherChange(setWeather), [])
+
+  useEffect(() => {
+    setFocus(currentFocus())
+
+    // Odak listesini FocusCard başlatıyor. Yoklama yirmi saniyede bir olduğu
+    // için kart o kadar süre eski parçayı gösterebilirdi; seans haberi gelir
+    // gelmez tazeleyince çalan şarkı anında görünüyor.
+    return onFocusChange((next) => {
+      setFocus(next)
+      if (next) void refresh()
+    })
+  }, [refresh])
 
   const playing = now?.playing ?? null
   const duration = playing?.duration_ms ?? 0
@@ -284,13 +302,24 @@ export function SpotifyCard() {
       loading={!now && !error}
       error={error}
       action={
-        now?.connected ? (
-          <Link
-            to="/muzik"
-            className="rounded-lg border border-edge px-2.5 py-1 text-xs font-medium text-muted hover:bg-panel hover:text-ink"
-          >
-            Arşiv
-          </Link>
+        focus || now?.connected ? (
+          <div className="flex items-center gap-2">
+            {/* Çalanın rastgele değil, süren seansın müziği olduğunu belli
+                eder: seans FocusCard'da başlıyor, çalan parça burada. */}
+            {focus && (
+              <span className="rounded-lg bg-accent-soft px-2 py-1 text-xs font-medium text-accent">
+                🎯 Odak
+              </span>
+            )}
+            {now?.connected && (
+              <Link
+                to="/muzik"
+                className="rounded-lg border border-edge px-2.5 py-1 text-xs font-medium text-muted hover:bg-panel hover:text-ink"
+              >
+                Arşiv
+              </Link>
+            )}
+          </div>
         ) : undefined
       }
     >

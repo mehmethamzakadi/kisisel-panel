@@ -1,11 +1,9 @@
 import { supabase } from './supabase'
+import type { Device } from '../../supabase/functions/_shared/wire'
 
-export type Device = {
-  id: string
-  name: string
-  type: string
-  is_active: boolean
-}
+// Sözleşme wire.ts'te (spotify-play üretir); buradan yeniden dışa veriliyor ki
+// SpotifyCard Device'ı alışıldığı gibi bu modülden almaya devam etsin.
+export type { Device }
 
 export type Playlist = { uri: string; name: string; url: string | null }
 

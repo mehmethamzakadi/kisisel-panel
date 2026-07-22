@@ -15,8 +15,7 @@ import {
   apiWrite,
   currentUser,
 } from '../_shared/spotify.ts'
-
-type Device = { id: string; name: string; type: string; is_active: boolean }
+import type { Device } from '../_shared/wire.ts'
 
 async function devices(token: string): Promise<Device[]> {
   const json = await api(token, '/me/player/devices')

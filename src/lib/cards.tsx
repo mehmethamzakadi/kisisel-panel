@@ -27,6 +27,13 @@ type CardDef = {
   label: string
   /** Tüm satırı kaplar. Listesi uzun olan kartlar dikey yerine yatay yayılır. */
   wide?: boolean
+  /**
+   * Odak seansı sürerken soluklaşır. Yalnızca takip edilen sayılar ve gündem
+   * işaretli: not, alışveriş ve müzik seansın parçası, hava ile günün sözü
+   * zaten sakin. Gizlemek yerine soluklaştırmak bilinçli — kart yerinde
+   * kalırsa düzen seans başlayınca zıplamıyor.
+   */
+  distracting?: boolean
   render: () => ReactNode
 }
 
@@ -43,15 +50,21 @@ export const CARDS: CardDef[] = [
   { id: 'weather', label: 'Hava Durumu', render: () => <WeatherCard /> },
   { id: 'spotify', label: 'Müzik', render: () => <SpotifyCard /> },
   { id: 'meal', label: 'Bugün Ne Yesem?', render: () => <MealCard /> },
-  { id: 'gold', label: 'Altın', render: () => <GoldCard /> },
-  { id: 'rates', label: 'Döviz', render: () => <RatesCard /> },
+  { id: 'gold', label: 'Altın', distracting: true, render: () => <GoldCard /> },
+  { id: 'rates', label: 'Döviz', distracting: true, render: () => <RatesCard /> },
   { id: 'quicknote', label: 'Hızlı Not', render: () => <QuickNoteCard /> },
   { id: 'shopping', label: 'Alışveriş', render: () => <ShoppingCard /> },
   { id: 'focus', label: 'Odak', render: () => <FocusCard /> },
   // Bu ikisi tam genişlikte: geriye kalan sekiz kart tam dört satır yapıyor,
   // böylece tek başına kalıp yanında boşluk bırakan kart olmuyor.
   { id: 'quote', label: 'Günün Sözü', wide: true, render: () => <QuoteCard /> },
-  { id: 'news', label: 'Gündem', wide: true, render: () => <NewsCard /> },
+  {
+    id: 'news',
+    label: 'Gündem',
+    wide: true,
+    distracting: true,
+    render: () => <NewsCard />,
+  },
 ]
 
 export const DEFAULT_ORDER = CARDS.map((c) => c.id)

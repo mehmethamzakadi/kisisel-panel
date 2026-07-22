@@ -36,3 +36,32 @@ export function onWeatherChange(handler: (weather: WeatherNow) => void) {
   window.addEventListener(WEATHER, listener)
   return () => window.removeEventListener(WEATHER, listener)
 }
+
+const FOCUS = 'panel:focus-session'
+
+// Odak seansı FocusCard'ın içinde yaşıyor ama panelin tamamını ilgilendiriyor:
+// müzik kartı seansı tanımalı, dikkat dağıtan kartlar sessizleşmeli.
+//
+// Havada olduğu gibi son değer burada tutuluyor, ama sebebi bir adım daha
+// ince: React çocuk efektlerini ebeveyninkinden önce çalıştırır, yani
+// FocusCard yayını DashboardPage abone olmadan yapar. Dinleyen taraf mount
+// olurken currentFocus() ile durumu yine de öğrenir.
+export type FocusNow = { until: number; planned: number }
+
+let lastFocus: FocusNow | null = null
+
+export function focusChanged(focus: FocusNow | null) {
+  lastFocus = focus
+  window.dispatchEvent(new CustomEvent(FOCUS, { detail: focus }))
+}
+
+export function currentFocus() {
+  return lastFocus
+}
+
+export function onFocusChange(handler: (focus: FocusNow | null) => void) {
+  const listener = (e: Event) =>
+    handler((e as CustomEvent<FocusNow | null>).detail)
+  window.addEventListener(FOCUS, listener)
+  return () => window.removeEventListener(FOCUS, listener)
+}

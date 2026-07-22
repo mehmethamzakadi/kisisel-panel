@@ -3,7 +3,7 @@ import { Sparkline } from './Sparkline'
 import { formatUpdatedAt, useSnapshot } from '../lib/useSnapshot'
 import { changePct, useHistory } from '../lib/history'
 
-type Rate = { code: string; name: string; buying: number; selling: number }
+import type { Rate } from '../../supabase/functions/_shared/wire'
 
 const money = new Intl.NumberFormat('tr-TR', {
   minimumFractionDigits: 2,

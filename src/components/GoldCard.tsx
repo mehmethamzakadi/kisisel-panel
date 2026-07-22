@@ -2,8 +2,7 @@ import { Card } from './Card'
 import { Sparkline } from './Sparkline'
 import { formatUpdatedAt, useSnapshot } from '../lib/useSnapshot'
 import { useHistory } from '../lib/history'
-
-type Gold = { code: string; label: string; selling: number; change: number }
+import type { Gold } from '../../supabase/functions/_shared/wire'
 
 const money = new Intl.NumberFormat('tr-TR', {
   minimumFractionDigits: 2,

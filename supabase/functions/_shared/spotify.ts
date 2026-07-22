@@ -21,15 +21,9 @@ export const SCOPES = [
   'user-modify-playback-state',
 ].join(' ')
 
-export type Track = {
-  id: string
-  track: string
-  artist: string
-  album: string | null
-  art: string | null
-  url: string | null
-  duration_ms: number | null
-}
+// Sözleşme wire.ts'te; buradan yeniden dışa veriliyor ki spotify-* fonksiyonları
+// Track'i alışıldığı gibi bu modülden almaya devam etsin.
+export type { Track } from './wire.ts'
 
 /** service_role istemcisi — RLS'i atlar, spotify_auth'a yalnızca bu erişir. */
 export function adminClient(): SupabaseClient {

@@ -1,15 +1,9 @@
 import { supabase } from './supabase'
+import type { Track } from '../../supabase/functions/_shared/wire'
 
-/** spotify-now'ın döndürdüğü parça biçimi. */
-export type Track = {
-  id: string
-  track: string
-  artist: string
-  album: string | null
-  art: string | null
-  url: string | null
-  duration_ms: number | null
-}
+// Sözleşme wire.ts'te (spotify-now üretir); buradan yeniden dışa veriliyor ki
+// kartlar Track'i alışıldığı gibi bu modülden almaya devam etsin.
+export type { Track }
 
 export type NowPlaying = {
   connected: boolean

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card } from './Card'
 import { supabase } from '../lib/supabase'
+import { focusChanged } from '../lib/bus'
 import {
   failureMessage,
   pause,
@@ -90,6 +91,16 @@ export function FocusCard() {
   useEffect(() => {
     void loadHistory()
   }, [loadHistory])
+
+  // Seansı panele duyur: müzik kartı seansı tanısın, dikkat dağıtan kartlar
+  // sessizleşsin. Yayın seansı state'e bağlanarak yapılıyor çünkü seans üç
+  // ayrı yoldan değişiyor — başlatma, bitirme ve sekme kapalıyken dolmuş
+  // seansın temizlenmesi. Üçüne ayrı ayrı çağrı koymak birini unutmak demekti.
+  useEffect(() => {
+    focusChanged(
+      session ? { until: session.until, planned: session.planned } : null,
+    )
+  }, [session])
 
   /** Seansı kapatır. keep=false ise vazgeçme sayılır ve kaydedilmez. */
   const stop = useCallback(

@@ -7,6 +7,8 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
+import type { Gold, Headline, Rate } from '../_shared/wire.ts'
+
 const TCMB_URL = 'https://www.tcmb.gov.tr/kurlar/today.xml'
 const TRUNCGIL_URL = 'https://finans.truncgil.com/v4/today.json'
 
@@ -27,10 +29,6 @@ const FEEDS = [
   { source: 'TRT Haber', url: 'https://www.trthaber.com/sondakika.rss' },
   { source: 'Hacker News', url: 'https://hnrss.org/frontpage' },
 ]
-
-type Rate = { code: string; name: string; buying: number; selling: number }
-type Gold = { code: string; label: string; selling: number; change: number }
-type Headline = { source: string; title: string; link: string; date: string | null }
 
 function tag(xml: string, name: string): string | null {
   const match = xml.match(

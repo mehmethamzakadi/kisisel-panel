@@ -2,13 +2,7 @@ import { useMemo } from 'react'
 import { Card } from './Card'
 import { formatUpdatedAt, useSnapshot } from '../lib/useSnapshot'
 import { timeAgo, timestamp } from '../lib/time'
-
-type Headline = {
-  source: string
-  title: string
-  link: string
-  date: string | null
-}
+import type { Headline } from '../../supabase/functions/_shared/wire'
 
 // Kaynak rozetleri renkle ayrışsın: dört sütuna yayılmış başlıklarda hangi
 // haberin nereden geldiği yoksa okunmuyor.
