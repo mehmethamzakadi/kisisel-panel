@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card } from './Card'
 import { supabase } from '../lib/supabase'
-import { focusChanged } from '../lib/bus'
+import { focusChanged, onFocusRequest, takeFocusRequest } from '../lib/bus'
 import {
   failureMessage,
   pause,
@@ -179,7 +179,7 @@ export function FocusCard() {
     }
   }, [loadHistory])
 
-  async function begin(minutes: number) {
+  const begin = useCallback(async (minutes: number) => {
     setStarting(true)
     setNotice(null)
 
@@ -203,7 +203,20 @@ export function FocusCard() {
     if (result.ok) setNotice(`Çalıyor: ${result.playlist.name}`)
     else if (result.reason === 'no-device') setNotice('Sayaç başladı, müzik için açık cihaz yok.')
     else setNotice(`Sayaç başladı. ${failureMessage(result)}`)
-  }
+  }, [])
+
+  // Komut paletinden gelen "odak başlat" isteği. Mount sırasında bekleyen istek
+  // de alınıyor: kullanıcı komutu başka sayfadayken vermiş ve panele yeni
+  // dönmüş olabilir. Süren seansın üstüne yazılmıyor.
+  useEffect(() => {
+    const pending = takeFocusRequest()
+    if (pending && !readSession()) void begin(pending)
+
+    return onFocusRequest((minutes) => {
+      takeFocusRequest()
+      if (!readSession()) void begin(minutes)
+    })
+  }, [begin])
 
   // Son yedi günün günlük toplamı — çubuk grafiğin verisi.
   const days = Array.from({ length: 7 }, (_, i) => {

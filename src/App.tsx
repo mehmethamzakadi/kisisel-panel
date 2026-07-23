@@ -7,6 +7,7 @@ import { NotesPage } from './pages/NotesPage'
 import { MealsPage } from './pages/MealsPage'
 import { MusicPage } from './pages/MusicPage'
 import { Login } from './components/Login'
+import { CommandPalette } from './components/CommandPalette'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -29,6 +30,7 @@ function App() {
   if (!isSupabaseConfigured) {
     return (
       <BrowserRouter>
+        <CommandPalette />
         <Routes>
           <Route path="/" element={<DashboardPage demo />} />
           <Route path="/notlar" element={<NotesPage />} />
@@ -45,6 +47,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <CommandPalette />
       <Routes>
         <Route path="/" element={<DashboardPage email={session.user.email} />} />
         <Route path="/notlar" element={<NotesPage />} />

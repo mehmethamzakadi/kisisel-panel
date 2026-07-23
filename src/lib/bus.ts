@@ -65,3 +65,45 @@ export function onFocusChange(handler: (focus: FocusNow | null) => void) {
   window.addEventListener(FOCUS, listener)
   return () => window.removeEventListener(FOCUS, listener)
 }
+
+const FOCUS_REQUEST = 'panel:focus-request'
+
+// Komut paleti panelin her yerinden odak başlatabiliyor, ama seansı FocusCard
+// yönetiyor — sayaç, kayıt ve müzik onun işi. Palet yalnızca istek bırakıyor.
+//
+// İstek burada bekletiliyor çünkü kullanıcı komutu /notlar'dayken vermiş
+// olabilir: kart o an mount değil ve olayı kaçırırdı. Panele dönünce bekleyen
+// isteği kendisi alıyor.
+let pendingFocus: number | null = null
+
+export function requestFocus(minutes: number) {
+  pendingFocus = minutes
+  window.dispatchEvent(new CustomEvent(FOCUS_REQUEST, { detail: minutes }))
+}
+
+/** İsteği okur ve tüketir; aynı istek iki kez seans başlatmasın. */
+export function takeFocusRequest() {
+  const minutes = pendingFocus
+  pendingFocus = null
+  return minutes
+}
+
+export function onFocusRequest(handler: (minutes: number) => void) {
+  const listener = (e: Event) => handler((e as CustomEvent<number>).detail)
+  window.addEventListener(FOCUS_REQUEST, listener)
+  return () => window.removeEventListener(FOCUS_REQUEST, listener)
+}
+
+const PALETTE = 'panel:palette-open'
+
+// Kısayolu bilmeyen ya da klavyesi olmayan kullanıcı için TopBar'daki düğme.
+// Palet App seviyesinde, TopBar ise sayfanın içinde duruyor; state'i ikisinin
+// ortak atasına taşımak yerine mevcut olay kanalı yeterli.
+export function openPalette() {
+  window.dispatchEvent(new CustomEvent(PALETTE))
+}
+
+export function onOpenPalette(handler: () => void) {
+  window.addEventListener(PALETTE, handler)
+  return () => window.removeEventListener(PALETTE, handler)
+}

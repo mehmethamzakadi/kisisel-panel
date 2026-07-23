@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { CardsIcon, LogoutIcon, MealIcon, NoteIcon } from './icons'
+import { openPalette } from '../lib/bus'
+import { paletteShortcut } from '../lib/commands'
+import { CardsIcon, LogoutIcon, MealIcon, NoteIcon, SearchIcon } from './icons'
 
 const dateFormat = new Intl.DateTimeFormat('tr-TR', {
   weekday: 'long',
@@ -36,50 +38,73 @@ export function TopBar({ email, demo, editing, onToggleEditing }: Props) {
         </p>
       </div>
 
-      {demo ? (
-        <span className="rounded-full border border-edge bg-card px-3 py-1 text-xs text-muted">
-          Supabase yapılandırılmadı — giriş kapalı
-        </span>
-      ) : (
-        // Tek bir kapsayıcı: dağınık butonlar yerine gruplanmış bir çubuk.
-        <nav className="flex items-center gap-1 rounded-2xl border border-edge/80 bg-card/60 p-1 shadow-[0_1px_2px_rgba(16,24,40,0.03)] backdrop-blur">
-          <Link to="/notlar" className={pill}>
-            <NoteIcon />
-            <span className="hidden sm:inline">Notlar</span>
-          </Link>
-          <Link to="/tarifler" className={pill}>
-            <MealIcon />
-            <span className="hidden sm:inline">Tarifler</span>
-          </Link>
-
-          <button
-            onClick={onToggleEditing}
-            aria-pressed={editing}
-            className={`${pill} ${editing ? 'bg-accent-soft text-accent hover:bg-accent-soft hover:text-accent' : ''}`}
-          >
-            <CardsIcon />
-            <span className="hidden sm:inline">Kartlar</span>
-          </button>
-
-          <span className="mx-1 h-5 w-px bg-edge" aria-hidden />
-
-          <span
-            title={email}
-            className="flex size-8 items-center justify-center rounded-xl bg-accent-soft text-xs font-semibold text-accent uppercase select-none"
-          >
-            {email?.[0] ?? '?'}
+      <div className="flex flex-wrap items-center gap-3">
+        {demo && (
+          <span className="rounded-full border border-edge bg-card px-3 py-1 text-xs text-muted">
+            Supabase yapılandırılmadı — giriş kapalı
           </span>
+        )}
 
+        {/* Tek bir kapsayıcı: dağınık butonlar yerine gruplanmış bir çubuk. */}
+        <nav className="flex items-center gap-1 rounded-2xl border border-edge/80 bg-card/60 p-1 shadow-[0_1px_2px_rgba(16,24,40,0.03)] backdrop-blur">
+          {/* Kısayol keşfedilmezse yok sayılır. Gösterge hem hatırlatıyor hem
+              de dokunmatik cihazda paleti açan düğmenin kendisi oluyor —
+              klavyesiz ekranda ölü bir ipucu bırakmamak için. */}
           <button
-            onClick={() => supabase?.auth.signOut()}
-            aria-label="Çıkış yap"
-            title="Çıkış yap"
-            className="flex size-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-panel hover:text-down"
+            onClick={openPalette}
+            aria-label="Komut paletini aç"
+            title={`Komut paleti (${paletteShortcut()})`}
+            className={pill}
           >
-            <LogoutIcon />
+            <SearchIcon />
+            <kbd className="hidden font-sans text-xs sm:inline">
+              {paletteShortcut()}
+            </kbd>
           </button>
+
+          {!demo && (
+            <>
+              <span className="mx-1 h-5 w-px bg-edge" aria-hidden />
+
+              <Link to="/notlar" className={pill}>
+                <NoteIcon />
+                <span className="hidden sm:inline">Notlar</span>
+              </Link>
+              <Link to="/tarifler" className={pill}>
+                <MealIcon />
+                <span className="hidden sm:inline">Tarifler</span>
+              </Link>
+
+              <button
+                onClick={onToggleEditing}
+                aria-pressed={editing}
+                className={`${pill} ${editing ? 'bg-accent-soft text-accent hover:bg-accent-soft hover:text-accent' : ''}`}
+              >
+                <CardsIcon />
+                <span className="hidden sm:inline">Kartlar</span>
+              </button>
+
+              <span className="mx-1 h-5 w-px bg-edge" aria-hidden />
+
+              <span
+                title={email}
+                className="flex size-8 items-center justify-center rounded-xl bg-accent-soft text-xs font-semibold text-accent uppercase select-none"
+              >
+                {email?.[0] ?? '?'}
+              </span>
+
+              <button
+                onClick={() => supabase?.auth.signOut()}
+                aria-label="Çıkış yap"
+                title="Çıkış yap"
+                className="flex size-9 items-center justify-center rounded-xl text-muted transition-colors hover:bg-panel hover:text-down"
+              >
+                <LogoutIcon />
+              </button>
+            </>
+          )}
         </nav>
-      )}
+      </div>
     </header>
   )
 }

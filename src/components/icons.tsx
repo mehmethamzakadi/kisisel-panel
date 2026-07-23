@@ -49,6 +49,13 @@ export const LogoutIcon = (p: Props) => (
   </Svg>
 )
 
+export const SearchIcon = (p: Props) => (
+  <Svg {...p}>
+    <circle cx="11" cy="11" r="6" />
+    <path d="M15.5 15.5L20 20" />
+  </Svg>
+)
+
 export const BackIcon = (p: Props) => (
   <Svg {...p}>
     <path d="M15 6l-6 6 6 6" />
